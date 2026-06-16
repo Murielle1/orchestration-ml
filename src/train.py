@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import joblib
+import logging
 
 import matplotlib.pyplot as plt
 import mlflow
@@ -28,7 +29,8 @@ from src.data import load_data, split
 from src.features import build_preprocessor
 from src.tracking import log_dataset, setup_experiment
 
-
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Construction du pipeline
 # ---------------------------------------------------------------------------
@@ -106,8 +108,9 @@ def train(c: float = 1.0, max_iter: int = 1000) -> dict:
         cm_path = _save_confusion_matrix(y_val, preds)
         mlflow.log_artifact(str(cm_path))
 
-        run_id = mlflow.active_run().info.run_id
-        print(f"\nRun MLflow : {run_id}")
+        active_run = mlflow.active_run()
+        if active_run:
+            logger.info("Run MLflow : %s", active_run.info.run_id)
 
     # --- Sauvegarde locale -------------------------------------------------
     MODEL_DIR.mkdir(parents=True, exist_ok=True)
