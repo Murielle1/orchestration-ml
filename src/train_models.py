@@ -9,6 +9,7 @@ Lancement :
     python -m src/train_models --cv 3 --scoring roc_auc
     python -m src/train_models --no-mlflow
 """
+
 from __future__ import annotations
 
 import argparse
@@ -45,13 +46,16 @@ from src.tracking import log_dataset, setup_experiment
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
-warnings.filterwarnings("ignore", message="X does not have valid feature names", category=UserWarning)
+warnings.filterwarnings(
+    "ignore", message="X does not have valid feature names", category=UserWarning
+)
 warnings.filterwarnings("ignore", category=UserWarning, module="lightgbm")
 
 
 # ---------------------------------------------------------------------------
 # Spécification des modèles
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class ModelSpec:
@@ -70,8 +74,8 @@ def build_model_specs() -> list[ModelSpec]:
                 n_jobs=-1,
             ),
             param_grid={
-                "clf__n_estimators":     [100, 200],
-                "clf__max_depth":        [None, 10, 20],
+                "clf__n_estimators": [100, 200],
+                "clf__max_depth": [None, 10, 20],
                 "clf__min_samples_leaf": [1, 2],
             },
         ),
@@ -84,8 +88,8 @@ def build_model_specs() -> list[ModelSpec]:
                 verbosity=0,
             ),
             param_grid={
-                "clf__n_estimators":  [100, 200],
-                "clf__max_depth":     [3, 5],
+                "clf__n_estimators": [100, 200],
+                "clf__max_depth": [3, 5],
                 "clf__learning_rate": [0.1, 0.01],
             },
         ),
@@ -97,8 +101,8 @@ def build_model_specs() -> list[ModelSpec]:
                 n_jobs=-1,
             ),
             param_grid={
-                "clf__n_estimators":  [100, 200],
-                "clf__num_leaves":    [31, 63],
+                "clf__n_estimators": [100, 200],
+                "clf__num_leaves": [31, 63],
                 "clf__learning_rate": [0.1, 0.01],
             },
         ),
@@ -112,6 +116,7 @@ def build_pipeline(estimator: ClassifierMixin) -> Pipeline:
 # ---------------------------------------------------------------------------
 # Résultat d'optimisation
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class FitResult:
@@ -128,10 +133,13 @@ class FitResult:
 # Optimisation par GridSearchCV
 # ---------------------------------------------------------------------------
 
+
 def optimize_model(
     spec: ModelSpec,
-    x_train, y_train,
-    x_test, y_test,
+    x_train,
+    y_train,
+    x_test,
+    y_test,
     cv: int = 5,
     scoring: str = "roc_auc",
 ) -> FitResult:
@@ -148,7 +156,7 @@ def optimize_model(
     )
     search.fit(x_train, y_train)
 
-    best  = search.best_estimator_
+    best = search.best_estimator_
     proba = best.predict_proba(x_test)[:, 1]
     preds = (proba >= 0.5).astype(int)
 
@@ -163,7 +171,11 @@ def optimize_model(
     )
     logger.info(
         "%s → cv_%s=%.3f | f1=%.3f | roc_auc=%.3f",
-        spec.name, scoring, result.cv_score, result.f1, result.roc_auc,
+        spec.name,
+        scoring,
+        result.cv_score,
+        result.f1,
+        result.roc_auc,
     )
     return result
 
@@ -172,9 +184,11 @@ def optimize_model(
 # Logging MLflow
 # ---------------------------------------------------------------------------
 
+
 def log_run_to_mlflow(
     result: FitResult,
-    x_test, y_test,
+    x_test,
+    y_test,
     cv: int,
     scoring: str,
     register_as: str | None = None,
@@ -184,11 +198,13 @@ def log_run_to_mlflow(
         mlflow.log_param("cv", cv)
         mlflow.log_param("scoring", scoring)
         mlflow.log_params(result.best_params)
-        mlflow.log_metrics({
-            f"cv_{scoring}": result.cv_score,
-            "f1":            result.f1,
-            "roc_auc":       result.roc_auc,
-        })
+        mlflow.log_metrics(
+            {
+                f"cv_{scoring}": result.cv_score,
+                "f1": result.f1,
+                "roc_auc": result.roc_auc,
+            }
+        )
 
         # Matrice de confusion
         cm = confusion_matrix(y_test, result.preds)
@@ -201,9 +217,10 @@ def log_run_to_mlflow(
         # Rapport de classification
         report_dict = cast(dict, classification_report(y_test, result.preds, output_dict=True))
         mlflow.log_dict(report_dict, "classification_report.json")
-        report_text = cast(str, classification_report(
-            y_test, result.preds, target_names=["dissatisfied", "satisfied"]
-        ))
+        report_text = cast(
+            str,
+            classification_report(y_test, result.preds, target_names=["dissatisfied", "satisfied"]),
+        )
         mlflow.log_text(report_text, "classification_report.txt")
         logger.info("\n%s", report_text)
 
@@ -211,7 +228,7 @@ def log_run_to_mlflow(
         _log_shap_summary(result.best_estimator, x_test, result.name)
 
         # Enregistrement du modèle
-        signature  = infer_signature(x_test, result.best_estimator.predict(x_test))
+        signature = infer_signature(x_test, result.best_estimator.predict(x_test))
         model_info = mlflow.sklearn.log_model(
             result.best_estimator,
             name="model",
@@ -234,11 +251,12 @@ def log_run_to_mlflow(
 def _log_shap_summary(pipeline: Pipeline, x_test, model_name: str) -> None:
     try:
         import shap
+
         preprocessor = pipeline.named_steps["preprocessor"]
-        clf          = pipeline.named_steps["clf"]
+        clf = pipeline.named_steps["clf"]
         x_transformed = preprocessor.transform(x_test)
-        explainer    = shap.TreeExplainer(clf)
-        shap_values  = explainer.shap_values(x_transformed)
+        explainer = shap.TreeExplainer(clf)
+        shap_values = explainer.shap_values(x_transformed)
         if isinstance(shap_values, list):
             shap_values = shap_values[1]
         fig, ax = plt.subplots(figsize=(10, 6))
@@ -265,9 +283,12 @@ def describe_registered_version(
     )
     client.update_model_version(name, str(version), description=description)
     for key, value in {
-        "model_family": result.name, "search_method": "GridSearchCV",
-        "cv": str(cv), "scoring": scoring,
-        "f1": f"{result.f1:.4f}", "roc_auc": f"{result.roc_auc:.4f}",
+        "model_family": result.name,
+        "search_method": "GridSearchCV",
+        "cv": str(cv),
+        "scoring": scoring,
+        "f1": f"{result.f1:.4f}",
+        "roc_auc": f"{result.roc_auc:.4f}",
         "dataset": "airline-passenger-satisfaction",
     }.items():
         client.set_model_version_tag(name, str(version), key, value)
@@ -277,6 +298,7 @@ def describe_registered_version(
 # ---------------------------------------------------------------------------
 # Entraînement de tous les modèles
 # ---------------------------------------------------------------------------
+
 
 def train_all(cv: int = 5, scoring: str = "roc_auc", use_mlflow: bool = True) -> list[FitResult]:
     df = load_data()
@@ -326,6 +348,7 @@ def train_all(cv: int = 5, scoring: str = "roc_auc", use_mlflow: bool = True) ->
 # ---------------------------------------------------------------------------
 # Point d'entrée CLI
 # ---------------------------------------------------------------------------
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(

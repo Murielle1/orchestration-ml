@@ -4,6 +4,7 @@ Séance 5 - TP MLflow Tracking
 Dataset : Airline Passenger Satisfaction
 Cible   : satisfaction  →  1 (satisfied) / 0 (neutral or dissatisfied)
 """
+
 from __future__ import annotations
 
 import argparse
@@ -32,6 +33,7 @@ from src.tracking import log_dataset, setup_experiment
 # Construction du pipeline
 # ---------------------------------------------------------------------------
 
+
 def build_model(c: float = 1.0, max_iter: int = 1000) -> Pipeline:
     return Pipeline(
         steps=[
@@ -53,6 +55,7 @@ def build_model(c: float = 1.0, max_iter: int = 1000) -> Pipeline:
 # ---------------------------------------------------------------------------
 # Entraînement + évaluation
 # ---------------------------------------------------------------------------
+
 
 def train(c: float = 1.0, max_iter: int = 1000) -> dict:
     # --- Chargement et découpage -------------------------------------------
@@ -81,16 +84,13 @@ def train(c: float = 1.0, max_iter: int = 1000) -> dict:
         preds = (proba >= 0.5).astype(int)
 
         metrics = {
-            "f1":      float(f1_score(y_val, preds)),
+            "f1": float(f1_score(y_val, preds)),
             "roc_auc": float(roc_auc_score(y_val, proba)),
         }
 
         print(f"\nf1={metrics['f1']:.3f}  roc_auc={metrics['roc_auc']:.3f}")
         print(
-            "\n"
-            + classification_report(
-                y_val, preds, target_names=["dissatisfied", "satisfied"]
-            )
+            "\n" + classification_report(y_val, preds, target_names=["dissatisfied", "satisfied"])
         )
 
         # Logger paramètres, métriques et modèle
@@ -139,6 +139,7 @@ def _save_confusion_matrix(y_true, y_pred):
 # ---------------------------------------------------------------------------
 # Point d'entrée CLI
 # ---------------------------------------------------------------------------
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(

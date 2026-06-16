@@ -10,6 +10,7 @@ Lancement :
     uvicorn src.api:app --reload
     uvicorn src.api:app --host 0.0.0.0 --port 8000
 """
+
 from __future__ import annotations
 
 import logging
@@ -33,6 +34,7 @@ ml: dict = {}
 # ---------------------------------------------------------------------------
 # Lifespan : chargement du modèle au démarrage, libération à l'arrêt
 # ---------------------------------------------------------------------------
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -68,6 +70,7 @@ app = FastAPI(
 # ---------------------------------------------------------------------------
 # Schéma d'entrée — S12-1
 # ---------------------------------------------------------------------------
+
 
 class Features(BaseModel):
     """Caractéristiques d'un passager et de son vol."""
@@ -122,46 +125,102 @@ class Features(BaseModel):
 
     # --- Scores de satisfaction (0 = N/A, 1-5) ------------------------------
     Inflight_wifi_service: int = Field(
-        ..., alias="Inflight wifi service", ge=0, le=5, examples=[4],
+        ...,
+        alias="Inflight wifi service",
+        ge=0,
+        le=5,
+        examples=[4],
     )
     Departure_Arrival_time_convenient: int = Field(
-        ..., alias="Departure/Arrival time convenient", ge=0, le=5, examples=[3],
+        ...,
+        alias="Departure/Arrival time convenient",
+        ge=0,
+        le=5,
+        examples=[3],
     )
     Ease_of_Online_booking: int = Field(
-        ..., alias="Ease of Online booking", ge=0, le=5, examples=[3],
+        ...,
+        alias="Ease of Online booking",
+        ge=0,
+        le=5,
+        examples=[3],
     )
     Gate_location: int = Field(
-        ..., alias="Gate location", ge=0, le=5, examples=[3],
+        ...,
+        alias="Gate location",
+        ge=0,
+        le=5,
+        examples=[3],
     )
     Food_and_drink: int = Field(
-        ..., alias="Food and drink", ge=0, le=5, examples=[4],
+        ...,
+        alias="Food and drink",
+        ge=0,
+        le=5,
+        examples=[4],
     )
     Online_boarding: int = Field(
-        ..., alias="Online boarding", ge=0, le=5, examples=[4],
+        ...,
+        alias="Online boarding",
+        ge=0,
+        le=5,
+        examples=[4],
     )
     Seat_comfort: int = Field(
-        ..., alias="Seat comfort", ge=0, le=5, examples=[4],
+        ...,
+        alias="Seat comfort",
+        ge=0,
+        le=5,
+        examples=[4],
     )
     Inflight_entertainment: int = Field(
-        ..., alias="Inflight entertainment", ge=0, le=5, examples=[4],
+        ...,
+        alias="Inflight entertainment",
+        ge=0,
+        le=5,
+        examples=[4],
     )
     On_board_service: int = Field(
-        ..., alias="On-board service", ge=0, le=5, examples=[4],
+        ...,
+        alias="On-board service",
+        ge=0,
+        le=5,
+        examples=[4],
     )
     Leg_room_service: int = Field(
-        ..., alias="Leg room service", ge=0, le=5, examples=[3],
+        ...,
+        alias="Leg room service",
+        ge=0,
+        le=5,
+        examples=[3],
     )
     Baggage_handling: int = Field(
-        ..., alias="Baggage handling", ge=0, le=5, examples=[4],
+        ...,
+        alias="Baggage handling",
+        ge=0,
+        le=5,
+        examples=[4],
     )
     Checkin_service: int = Field(
-        ..., alias="Checkin service", ge=0, le=5, examples=[4],
+        ...,
+        alias="Checkin service",
+        ge=0,
+        le=5,
+        examples=[4],
     )
     Inflight_service: int = Field(
-        ..., alias="Inflight service", ge=0, le=5, examples=[4],
+        ...,
+        alias="Inflight service",
+        ge=0,
+        le=5,
+        examples=[4],
     )
     Cleanliness: int = Field(
-        ..., alias="Cleanliness", ge=0, le=5, examples=[4],
+        ...,
+        alias="Cleanliness",
+        ge=0,
+        le=5,
+        examples=[4],
     )
 
     model_config = {
@@ -202,6 +261,7 @@ class Features(BaseModel):
 # Schéma de sortie — S12-2
 # ---------------------------------------------------------------------------
 
+
 class PredictionOut(BaseModel):
     """Résultat de la prédiction."""
 
@@ -226,6 +286,7 @@ class PredictionOut(BaseModel):
 # Endpoints
 # ---------------------------------------------------------------------------
 
+
 @app.get("/health", tags=["Monitoring"])
 def health() -> dict:
     """Vérifie que l'API est opérationnelle."""
@@ -247,9 +308,9 @@ def predict(features: Features) -> PredictionOut:
     # (ceux attendus par le pipeline sklearn entraîné)
     row = pd.DataFrame([features.model_dump(by_alias=True)])
 
-    proba      = float(model.predict_proba(row)[0, 1])
+    proba = float(model.predict_proba(row)[0, 1])
     prediction = int(proba >= 0.5)
-    label      = "satisfied" if prediction == 1 else "neutral or dissatisfied"
+    label = "satisfied" if prediction == 1 else "neutral or dissatisfied"
 
     logger.info("Prédiction → %s (proba=%.4f)", label, proba)
 
@@ -264,7 +325,7 @@ def predict(features: Features) -> PredictionOut:
 def model_info() -> dict:
     """Retourne les informations sur le modèle actuellement servi."""
     return {
-        "version":    os.environ.get("MODEL_VERSION", "unknown"),
+        "version": os.environ.get("MODEL_VERSION", "unknown"),
         "model_path": str(MODEL_DIR / "model.joblib"),
-        "loaded":     "model" in ml,
+        "loaded": "model" in ml,
     }

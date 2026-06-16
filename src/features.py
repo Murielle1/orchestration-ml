@@ -1,4 +1,5 @@
 """Construction du pré-processing."""
+
 from __future__ import annotations
 
 from sklearn.compose import ColumnTransformer
@@ -43,30 +44,36 @@ def build_preprocessor() -> ColumnTransformer:
         `.fit_transform(X_train)` / `.transform(X_test)`.
     """
     # --- Branche 1 : numériques continues -----------------------------------
-    numeric_pipeline = Pipeline(steps=[
-        ("imputer", SimpleImputer(strategy="median")),
-        ("scaler",  StandardScaler()),
-    ])
+    numeric_pipeline = Pipeline(
+        steps=[
+            ("imputer", SimpleImputer(strategy="median")),
+            ("scaler", StandardScaler()),
+        ]
+    )
 
     # --- Branche 2 : catégorielles ------------------------------------------
-    categorical_pipeline = Pipeline(steps=[
-        (
-            "encoder",
-            OneHotEncoder(handle_unknown="ignore", sparse_output=False),
-        ),
-    ])
+    categorical_pipeline = Pipeline(
+        steps=[
+            (
+                "encoder",
+                OneHotEncoder(handle_unknown="ignore", sparse_output=False),
+            ),
+        ]
+    )
 
     # --- Branche 3 : scores de satisfaction (0-5) ---------------------------
-    rating_pipeline = Pipeline(steps=[
-        ("imputer", SimpleImputer(strategy="median")),
-    ])
+    rating_pipeline = Pipeline(
+        steps=[
+            ("imputer", SimpleImputer(strategy="median")),
+        ]
+    )
 
     # --- Assemblage ---------------------------------------------------------
     return ColumnTransformer(
         transformers=[
-            ("num",    numeric_pipeline,     NUMERIC_FEATURES),
-            ("cat",    categorical_pipeline, CATEGORICAL_FEATURES),
-            ("rating", rating_pipeline,      RATING_FEATURES),
+            ("num", numeric_pipeline, NUMERIC_FEATURES),
+            ("cat", categorical_pipeline, CATEGORICAL_FEATURES),
+            ("rating", rating_pipeline, RATING_FEATURES),
         ],
         remainder="drop",  # toute colonne non listée est ignorée
     )

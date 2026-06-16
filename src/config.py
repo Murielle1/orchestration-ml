@@ -1,4 +1,5 @@
 """Configuration centrale du projet Airline Passenger Satisfaction."""
+
 from __future__ import annotations
 
 import os
@@ -12,16 +13,16 @@ load_dotenv(ROOT / ".env")
 # ---------------------------------------------------------------------------
 # Chemins
 # ---------------------------------------------------------------------------
-DATA_DIR   = ROOT / "data"
+DATA_DIR = ROOT / "data"
 PROCESSED_DIR = DATA_DIR / "processed"
 
 TRAIN_PATH = DATA_DIR / "train.csv"
-TEST_PATH  = DATA_DIR / "test.csv"
+TEST_PATH = DATA_DIR / "test.csv"
 
 # Chemin unique fusionné (utilisé par load_data si on travaille sur un seul CSV)
-DATA_PATH  = DATA_DIR / "train.csv"
+DATA_PATH = DATA_DIR / "train.csv"
 
-MODEL_DIR  = ROOT / "models"
+MODEL_DIR = ROOT / "models"
 
 # ---------------------------------------------------------------------------
 # Variable cible
@@ -29,7 +30,7 @@ MODEL_DIR  = ROOT / "models"
 TARGET = "satisfaction"
 
 # Valeurs textuelles dans le CSV → encodage binaire effectué dans data.py
-TARGET_POSITIVE = "satisfied"           # → 1
+TARGET_POSITIVE = "satisfied"  # → 1
 TARGET_NEGATIVE = "neutral or dissatisfied"  # → 0
 
 # Colonnes à supprimer dès le chargement (identifiants sans valeur prédictive)
@@ -82,14 +83,14 @@ ALL_FEATURES: list[str] = NUMERIC_FEATURES + CATEGORICAL_FEATURES + RATING_FEATU
 # Entraînement
 # ---------------------------------------------------------------------------
 RANDOM_STATE = 42
-TEST_SIZE    = 0.2
+TEST_SIZE = 0.2
 
 # ---------------------------------------------------------------------------
 # MLflow — surcouche via variables d'environnement (principe 12-factor)
 # ---------------------------------------------------------------------------
 MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "http://127.0.0.1:5000")
-MLFLOW_EXPERIMENT   = os.getenv("MLFLOW_EXPERIMENT", "airline-satisfaction-baseline")
-MODEL_NAME          = os.getenv("MODEL_NAME", "airline-classifier")
+MLFLOW_EXPERIMENT = os.getenv("MLFLOW_EXPERIMENT", "airline-satisfaction-baseline")
+MODEL_NAME = os.getenv("MODEL_NAME", "airline-classifier")
 
 MLFLOW_EXPERIMENT_DESCRIPTION = os.getenv(
     "MLFLOW_EXPERIMENT_DESCRIPTION",
@@ -118,7 +119,7 @@ MLFLOW_EXPERIMENT_TAGS = _parse_tags(
 # Seuils de la porte qualité (evaluate.py)
 # ---------------------------------------------------------------------------
 EVAL_ROC_AUC_MIN = float(os.getenv("EVAL_ROC_AUC_MIN", "0.85"))
-EVAL_F1_MIN      = float(os.getenv("EVAL_F1_MIN", "0.80"))
+EVAL_F1_MIN = float(os.getenv("EVAL_F1_MIN", "0.80"))
 
 # ---------------------------------------------------------------------------
 # API FastAPI

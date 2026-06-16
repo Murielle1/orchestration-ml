@@ -1,4 +1,5 @@
 """Chargement et découpage des données."""
+
 from __future__ import annotations
 
 import pandas as pd
@@ -18,6 +19,7 @@ from src.config import (
 # ---------------------------------------------------------------------------
 # Chargement
 # ---------------------------------------------------------------------------
+
 
 def load_data(path=DATA_PATH) -> pd.DataFrame:
     """
@@ -71,13 +73,12 @@ def _encode_target(series: pd.Series) -> pd.Series:
         Si des valeurs inattendues sont présentes.
     """
     mapping = {TARGET_POSITIVE: 1, TARGET_NEGATIVE: 0}
-    valid   = set(mapping.keys())
-    found   = set(series.dropna().unique())
+    valid = set(mapping.keys())
+    found = set(series.dropna().unique())
 
     if unexpected := found - valid:
         raise ValueError(
-            f"Valeurs inattendues dans '{TARGET}' : {unexpected}. "
-            f"Valeurs attendues : {valid}"
+            f"Valeurs inattendues dans '{TARGET}' : {unexpected}. Valeurs attendues : {valid}"
         )
 
     return series.map(mapping).astype("int8")
@@ -86,6 +87,7 @@ def _encode_target(series: pd.Series) -> pd.Series:
 # ---------------------------------------------------------------------------
 # Découpage train / validation
 # ---------------------------------------------------------------------------
+
 
 def split(df: pd.DataFrame, test_size: float = TEST_SIZE):
     """
@@ -109,7 +111,8 @@ def split(df: pd.DataFrame, test_size: float = TEST_SIZE):
     y = df[TARGET]
 
     return train_test_split(
-        X, y,
+        X,
+        y,
         test_size=test_size,
         stratify=y,
         random_state=RANDOM_STATE,

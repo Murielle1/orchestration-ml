@@ -7,6 +7,7 @@ Séance 5 - TP MLflow Tracking (suite)
 
 Dataset : Airline Passenger Satisfaction
 """
+
 from __future__ import annotations
 
 import logging

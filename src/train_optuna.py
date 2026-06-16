@@ -13,6 +13,7 @@ Lancement :
     python -m src/train_optuna --n-trials 50 --cv 3
     python -m src/train_optuna --no-mlflow
 """
+
 from __future__ import annotations
 
 import argparse
@@ -59,13 +60,14 @@ optuna.logging.set_verbosity(optuna.logging.WARNING)
 # Spécification des familles de modèles
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class ModelSpec:
     """Spécification d'une famille de modèles à optimiser avec Optuna."""
 
     name: str
-    suggest_params: Callable       # (trial) -> dict
-    build_estimator: Callable      # (params) -> ClassifierMixin
+    suggest_params: Callable  # (trial) -> dict
+    build_estimator: Callable  # (params) -> ClassifierMixin
 
 
 def build_model_specs() -> list[ModelSpec]:
@@ -83,67 +85,77 @@ def build_model_specs() -> list[ModelSpec]:
     # --- Random Forest ------------------------------------------------------
     def rf_suggest(trial: optuna.Trial) -> dict:
         return {
-            "n_estimators":     trial.suggest_int("n_estimators", 100, 300),
-            "max_depth":        trial.suggest_categorical("max_depth", [None, 10, 20, 30]),
+            "n_estimators": trial.suggest_int("n_estimators", 100, 300),
+            "max_depth": trial.suggest_categorical("max_depth", [None, 10, 20, 30]),
             "min_samples_leaf": trial.suggest_int("min_samples_leaf", 1, 5),
-            "max_features":     trial.suggest_categorical("max_features", ["sqrt", "log2"]),
+            "max_features": trial.suggest_categorical("max_features", ["sqrt", "log2"]),
         }
 
     def rf_build(params: dict) -> ClassifierMixin:
-        return cast(ClassifierMixin, RandomForestClassifier(
-            **params,
-            class_weight="balanced",
-            random_state=RANDOM_STATE,
-            n_jobs=-1,
-        ))
+        return cast(
+            ClassifierMixin,
+            RandomForestClassifier(
+                **params,
+                class_weight="balanced",
+                random_state=RANDOM_STATE,
+                n_jobs=-1,
+            ),
+        )
 
     # --- XGBoost ------------------------------------------------------------
     def xgb_suggest(trial: optuna.Trial) -> dict:
         return {
-            "n_estimators":  trial.suggest_int("n_estimators", 100, 300),
-            "max_depth":     trial.suggest_int("max_depth", 3, 10),
+            "n_estimators": trial.suggest_int("n_estimators", 100, 300),
+            "max_depth": trial.suggest_int("max_depth", 3, 10),
             "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.3, log=True),
-            "subsample":     trial.suggest_float("subsample", 0.6, 1.0),
+            "subsample": trial.suggest_float("subsample", 0.6, 1.0),
             "colsample_bytree": trial.suggest_float("colsample_bytree", 0.6, 1.0),
         }
 
     def xgb_build(params: dict) -> ClassifierMixin:
-        return cast(ClassifierMixin, XGBClassifier(
-            **params,
-            eval_metric="logloss",
-            random_state=RANDOM_STATE,
-            n_jobs=-1,
-            verbosity=0,
-        ))
+        return cast(
+            ClassifierMixin,
+            XGBClassifier(
+                **params,
+                eval_metric="logloss",
+                random_state=RANDOM_STATE,
+                n_jobs=-1,
+                verbosity=0,
+            ),
+        )
 
     # --- LightGBM -----------------------------------------------------------
     def lgbm_suggest(trial: optuna.Trial) -> dict:
         return {
-            "n_estimators":  trial.suggest_int("n_estimators", 50, 300),
-            "num_leaves":    trial.suggest_int("num_leaves", 15, 127),
+            "n_estimators": trial.suggest_int("n_estimators", 50, 300),
+            "num_leaves": trial.suggest_int("num_leaves", 15, 127),
             "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.3, log=True),
-            "max_depth":     trial.suggest_int("max_depth", 3, 12),
+            "max_depth": trial.suggest_int("max_depth", 3, 12),
             "min_child_samples": trial.suggest_int("min_child_samples", 10, 50),
         }
 
     def lgbm_build(params: dict) -> ClassifierMixin:
-        return cast(ClassifierMixin, LGBMClassifier(
-            **params,
-            random_state=RANDOM_STATE,
-            verbose=-1,
-            n_jobs=-1,
-        ))
+        return cast(
+            ClassifierMixin,
+            LGBMClassifier(
+                **params,
+                random_state=RANDOM_STATE,
+                verbose=-1,
+                n_jobs=-1,
+            ),
+        )
 
     return [
-        ModelSpec(name="random_forest",  suggest_params=rf_suggest,   build_estimator=rf_build),
-        ModelSpec(name="xgboost",        suggest_params=xgb_suggest,  build_estimator=xgb_build),
-        ModelSpec(name="lightgbm",       suggest_params=lgbm_suggest, build_estimator=lgbm_build),
+        ModelSpec(name="random_forest", suggest_params=rf_suggest, build_estimator=rf_build),
+        ModelSpec(name="xgboost", suggest_params=xgb_suggest, build_estimator=xgb_build),
+        ModelSpec(name="lightgbm", suggest_params=lgbm_suggest, build_estimator=lgbm_build),
     ]
 
 
 # ---------------------------------------------------------------------------
 # Pipeline
 # ---------------------------------------------------------------------------
+
 
 def build_pipeline(estimator: ClassifierMixin) -> Pipeline:
     return Pipeline(steps=[("preprocessor", build_preprocessor()), ("clf", estimator)])
@@ -153,10 +165,11 @@ def build_pipeline(estimator: ClassifierMixin) -> Pipeline:
 # Résultat d'optimisation
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class FamilyResult:
     spec: ModelSpec
-    study: Any                 # optuna.Study
+    study: Any  # optuna.Study
     best_pipeline: Pipeline
     test_roc_auc: float
     test_f1: float
@@ -167,14 +180,17 @@ class FamilyResult:
 # Fonction objectif Optuna
 # ---------------------------------------------------------------------------
 
+
 def objective(trial: optuna.Trial, spec: ModelSpec, x_train, y_train, cv: int) -> float:
     """Fonction objectif : ROC AUC moyen en validation croisée (à maximiser)."""
-    params    = spec.suggest_params(trial)
+    params = spec.suggest_params(trial)
     estimator = spec.build_estimator(params)
-    pipeline  = build_pipeline(estimator)
+    pipeline = build_pipeline(estimator)
 
     scores = cross_val_score(
-        pipeline, x_train, y_train,
+        pipeline,
+        x_train,
+        y_train,
         scoring="roc_auc",
         cv=cv,
         n_jobs=-1,
@@ -185,6 +201,7 @@ def objective(trial: optuna.Trial, spec: ModelSpec, x_train, y_train, cv: int) -
 # ---------------------------------------------------------------------------
 # Étude Optuna
 # ---------------------------------------------------------------------------
+
 
 def run_study(
     spec: ModelSpec,
@@ -206,7 +223,9 @@ def run_study(
     )
     logger.info(
         "%s → meilleur cv_roc_auc=%.4f | params=%s",
-        spec.name, study.best_value, study.best_params,
+        spec.name,
+        study.best_value,
+        study.best_params,
     )
     return study
 
@@ -215,10 +234,13 @@ def run_study(
 # Optimisation complète d'une famille
 # ---------------------------------------------------------------------------
 
+
 def optimize_family(
     spec: ModelSpec,
-    x_train, y_train,
-    x_test, y_test,
+    x_train,
+    y_train,
+    x_test,
+    y_test,
     n_trials: int,
     cv: int,
 ) -> FamilyResult:
@@ -248,9 +270,11 @@ def optimize_family(
 # Logging MLflow
 # ---------------------------------------------------------------------------
 
+
 def log_family_to_mlflow(
     result: FamilyResult,
-    x_test, y_test,
+    x_test,
+    y_test,
     n_trials: int,
     cv: int,
     register_as: str | None = None,
@@ -274,11 +298,13 @@ def log_family_to_mlflow(
 
         # Meilleurs hyperparamètres et métriques finales
         mlflow.log_params(result.study.best_params)
-        mlflow.log_metrics({
-            "cv_roc_auc":  result.study.best_value,
-            "test_roc_auc": result.test_roc_auc,
-            "test_f1":      result.test_f1,
-        })
+        mlflow.log_metrics(
+            {
+                "cv_roc_auc": result.study.best_value,
+                "test_roc_auc": result.test_roc_auc,
+                "test_f1": result.test_f1,
+            }
+        )
 
         # Matrice de confusion
         cm = confusion_matrix(y_test, result.preds)
@@ -291,9 +317,10 @@ def log_family_to_mlflow(
         # Rapport de classification
         report_dict = cast(dict, classification_report(y_test, result.preds, output_dict=True))
         mlflow.log_dict(report_dict, "classification_report.json")
-        report_text = cast(str, classification_report(
-            y_test, result.preds, target_names=["dissatisfied", "satisfied"]
-        ))
+        report_text = cast(
+            str,
+            classification_report(y_test, result.preds, target_names=["dissatisfied", "satisfied"]),
+        )
         mlflow.log_text(report_text, "classification_report.txt")
         logger.info("\n%s", report_text)
 
@@ -304,7 +331,7 @@ def log_family_to_mlflow(
         _log_shap_summary(result.best_pipeline, x_test, result.spec.name)
 
         # Enregistrement du modèle
-        signature  = infer_signature(x_test, result.best_pipeline.predict(x_test))
+        signature = infer_signature(x_test, result.best_pipeline.predict(x_test))
         model_info = mlflow.sklearn.log_model(
             result.best_pipeline,
             name="model",
@@ -344,11 +371,12 @@ def _log_optuna_convergence(result: FamilyResult, run_id: str) -> None:
 def _log_shap_summary(pipeline: Pipeline, x_test, model_name: str) -> None:
     try:
         import shap
-        preprocessor  = pipeline.named_steps["preprocessor"]
-        clf           = pipeline.named_steps["clf"]
+
+        preprocessor = pipeline.named_steps["preprocessor"]
+        clf = pipeline.named_steps["clf"]
         x_transformed = preprocessor.transform(x_test)
-        explainer     = shap.TreeExplainer(clf)
-        shap_values   = explainer.shap_values(x_transformed)
+        explainer = shap.TreeExplainer(clf)
+        shap_values = explainer.shap_values(x_transformed)
         if isinstance(shap_values, list):
             shap_values = shap_values[1]
         fig, _ = plt.subplots(figsize=(10, 6))
@@ -382,14 +410,14 @@ def describe_registered_version(
     client.update_model_version(name, str(version), description=description)
 
     for key, value in {
-        "model_family":  result.spec.name,
+        "model_family": result.spec.name,
         "search_method": "Optuna-TPE",
-        "n_trials":      str(n_trials),
-        "cv":            str(cv),
-        "cv_roc_auc":    f"{result.study.best_value:.4f}",
-        "test_roc_auc":  f"{result.test_roc_auc:.4f}",
-        "test_f1":       f"{result.test_f1:.4f}",
-        "dataset":       "airline-passenger-satisfaction",
+        "n_trials": str(n_trials),
+        "cv": str(cv),
+        "cv_roc_auc": f"{result.study.best_value:.4f}",
+        "test_roc_auc": f"{result.test_roc_auc:.4f}",
+        "test_f1": f"{result.test_f1:.4f}",
+        "dataset": "airline-passenger-satisfaction",
     }.items():
         client.set_model_version_tag(name, str(version), key, value)
 
@@ -399,6 +427,7 @@ def describe_registered_version(
 # ---------------------------------------------------------------------------
 # Orchestration principale
 # ---------------------------------------------------------------------------
+
 
 def optimize(
     n_trials: int = 30,
@@ -422,7 +451,9 @@ def optimize(
     best = results[0]
     logger.info(
         "Meilleure famille : %s (test_roc_auc=%.3f | f1=%.3f)",
-        best.spec.name, best.test_roc_auc, best.test_f1,
+        best.spec.name,
+        best.test_roc_auc,
+        best.test_f1,
     )
 
     if use_mlflow:
@@ -431,10 +462,12 @@ def optimize(
             mlflow.log_param("n_trials", n_trials)
             mlflow.log_param("cv", cv)
             mlflow.set_tag("best_model", best.spec.name)
-            mlflow.log_metrics({
-                "best_test_roc_auc": best.test_roc_auc,
-                "best_test_f1":      best.test_f1,
-            })
+            mlflow.log_metrics(
+                {
+                    "best_test_roc_auc": best.test_roc_auc,
+                    "best_test_f1": best.test_f1,
+                }
+            )
             for result in results:
                 register_as = MODEL_NAME if result is best else None
                 log_family_to_mlflow(result, x_test, y_test, n_trials, cv, register_as=register_as)
@@ -451,7 +484,10 @@ def optimize(
     for r in results:
         logger.info(
             "%-20s  %10.3f  %8.3f  %8.3f",
-            r.spec.name, r.study.best_value, r.test_roc_auc, r.test_f1,
+            r.spec.name,
+            r.study.best_value,
+            r.test_roc_auc,
+            r.test_f1,
         )
 
     return results
@@ -461,16 +497,16 @@ def optimize(
 # Point d'entrée CLI
 # ---------------------------------------------------------------------------
 
+
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Optuna TPE — Airline Passenger Satisfaction"
+    parser = argparse.ArgumentParser(description="Optuna TPE — Airline Passenger Satisfaction")
+    parser.add_argument(
+        "--n-trials", type=int, default=30, help="Nombre d'essais Optuna par famille"
     )
-    parser.add_argument("--n-trials", type=int, default=30,
-                        help="Nombre d'essais Optuna par famille")
-    parser.add_argument("--cv", type=int, default=5,
-                        help="Nombre de plis de validation croisée")
-    parser.add_argument("--no-mlflow", dest="use_mlflow", action="store_false",
-                        help="Désactive le suivi MLflow")
+    parser.add_argument("--cv", type=int, default=5, help="Nombre de plis de validation croisée")
+    parser.add_argument(
+        "--no-mlflow", dest="use_mlflow", action="store_false", help="Désactive le suivi MLflow"
+    )
     args = parser.parse_args()
     optimize(n_trials=args.n_trials, cv=args.cv, use_mlflow=args.use_mlflow)
 

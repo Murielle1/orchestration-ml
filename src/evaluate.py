@@ -15,6 +15,7 @@ Lancement :
     python -m src/evaluate --model-uri models:/airline-classifier/1
     python -m src/evaluate --no-validate          # évalue sans porte qualité
 """
+
 from __future__ import annotations
 
 import argparse
@@ -44,6 +45,7 @@ logger = logging.getLogger(__name__)
 # Résolution de l'URI du modèle
 # ---------------------------------------------------------------------------
 
+
 def latest_model_uri() -> str:
     """Résout l'URI de la dernière version enregistrée de MODEL_NAME.
 
@@ -57,7 +59,7 @@ def latest_model_uri() -> str:
     RuntimeError
         Si aucune version n'est enregistrée dans le registry.
     """
-    client   = mlflow.MlflowClient()
+    client = mlflow.MlflowClient()
     versions = client.search_model_versions(f"name='{MODEL_NAME}'")
 
     if not versions:
@@ -67,7 +69,7 @@ def latest_model_uri() -> str:
         )
 
     latest = max(versions, key=lambda v: int(v.version))
-    uri    = f"models:/{MODEL_NAME}/{latest.version}"
+    uri = f"models:/{MODEL_NAME}/{latest.version}"
     logger.info("Dernière version trouvée : %s (version %s)", MODEL_NAME, latest.version)
     return uri
 
@@ -75,6 +77,7 @@ def latest_model_uri() -> str:
 # ---------------------------------------------------------------------------
 # Seuils de la porte qualité
 # ---------------------------------------------------------------------------
+
 
 def build_thresholds() -> dict[str, MetricThreshold]:
     """Construit les seuils de validation depuis la configuration.
@@ -93,12 +96,13 @@ def build_thresholds() -> dict[str, MetricThreshold]:
     """
     # S11-1
     thresholds = {
-        "roc_auc":  MetricThreshold(threshold=EVAL_ROC_AUC_MIN, greater_is_better=True),
-        "f1_score": MetricThreshold(threshold=EVAL_F1_MIN,      greater_is_better=True),
+        "roc_auc": MetricThreshold(threshold=EVAL_ROC_AUC_MIN, greater_is_better=True),
+        "f1_score": MetricThreshold(threshold=EVAL_F1_MIN, greater_is_better=True),
     }
     logger.info(
         "Seuils qualité → roc_auc >= %.2f | f1_score >= %.2f",
-        EVAL_ROC_AUC_MIN, EVAL_F1_MIN,
+        EVAL_ROC_AUC_MIN,
+        EVAL_F1_MIN,
     )
     return thresholds
 
@@ -106,6 +110,7 @@ def build_thresholds() -> dict[str, MetricThreshold]:
 # ---------------------------------------------------------------------------
 # Évaluation principale
 # ---------------------------------------------------------------------------
+
 
 def evaluate_model(
     model_uri: str | None = None,
@@ -132,8 +137,8 @@ def evaluate_model(
     _, x_test, _, y_test = split(df)
 
     # mlflow.evaluate attend un DataFrame unique features + cible
-    eval_df          = x_test.copy()
-    eval_df[TARGET]  = y_test.values
+    eval_df = x_test.copy()
+    eval_df[TARGET] = y_test.values
     logger.info("Jeu d'évaluation : %d lignes | %d features", len(eval_df), x_test.shape[1])
 
     # --- Configuration MLflow ----------------------------------------------
@@ -144,7 +149,6 @@ def evaluate_model(
 
     # --- Run MLflow d'évaluation -------------------------------------------
     with mlflow.start_run(run_name="evaluate"):
-
         # S11-2a : traçabilité du jeu d'évaluation
         dataset = from_pandas(
             eval_df,
@@ -169,7 +173,7 @@ def evaluate_model(
         logger.info(
             "Résultats → f1_score=%.3f | roc_auc=%.3f | accuracy=%.3f",
             result.metrics.get("f1_score", float("nan")),
-            result.metrics.get("roc_auc",  float("nan")),
+            result.metrics.get("roc_auc", float("nan")),
             result.metrics.get("accuracy_score", float("nan")),
         )
 
@@ -193,6 +197,7 @@ def evaluate_model(
 # Point d'entrée CLI
 # ---------------------------------------------------------------------------
 
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Évaluation automatisée — Airline Passenger Satisfaction"
@@ -200,10 +205,7 @@ def main() -> None:
     parser.add_argument(
         "--model-uri",
         default=None,
-        help=(
-            "URI du modèle à évaluer "
-            "(défaut : dernière version de MODEL_NAME dans le registry)"
-        ),
+        help=("URI du modèle à évaluer (défaut : dernière version de MODEL_NAME dans le registry)"),
     )
     parser.add_argument(
         "--no-validate",
