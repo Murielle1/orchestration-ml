@@ -25,7 +25,7 @@ import mlflow.data
 import mlflow.models
 from mlflow.exceptions import MlflowException
 from mlflow.models import MetricThreshold
-
+from mlflow.data.pandas_dataset import from_pandas
 from src.config import (
     DATA_PATH,
     EVAL_F1_MIN,
@@ -146,7 +146,7 @@ def evaluate_model(
     with mlflow.start_run(run_name="evaluate"):
 
         # S11-2a : traçabilité du jeu d'évaluation
-        dataset = mlflow.data.from_pandas(
+        dataset = from_pandas(
             eval_df,
             source=str(DATA_PATH),
             targets=TARGET,
@@ -182,8 +182,9 @@ def evaluate_model(
             )
             logger.info("✓ Porte qualité passée — modèle validé.")
 
-        run_id = mlflow.active_run().info.run_id
-        logger.info("Run MLflow d'évaluation : %s", run_id)
+        active_run = mlflow.active_run()
+        if active_run:
+            logger.info("Run MLflow : %s", active_run.info.run_id)
 
     return result
 

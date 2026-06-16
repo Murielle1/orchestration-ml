@@ -12,7 +12,8 @@ from __future__ import annotations
 import logging
 
 import mlflow
-import mlflow.data
+from mlflow.data.pandas_dataset import from_pandas
+
 import pandas as pd
 
 from src.config import (
@@ -76,7 +77,7 @@ def log_dataset(df: pd.DataFrame, context: str, name: str = "dataset") -> None:
         Nom logique du dataset (ex. "train", "test").
     """
     # S5-9 : traçabilité du dataset
-    dataset = mlflow.data.from_pandas(
+    dataset = from_pandas(
         df,
         source=str(DATA_PATH),
         targets=TARGET,

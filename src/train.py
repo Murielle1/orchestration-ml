@@ -22,10 +22,10 @@ from sklearn.metrics import (
 )
 from sklearn.pipeline import Pipeline
 
-from config import MODEL_DIR, MODEL_NAME
-from data import load_data, split
-from features import build_preprocessor
-from tracking import log_dataset, setup_experiment
+from src.config import MODEL_DIR, MODEL_NAME
+from src.data import load_data, split
+from src.features import build_preprocessor
+from src.tracking import log_dataset, setup_experiment
 
 
 # ---------------------------------------------------------------------------

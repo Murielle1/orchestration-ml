@@ -32,6 +32,10 @@ jobs:
       - name: Lint (ruff check)
         run: uv run ruff check src
 
+      # 6. Vérification du formatage avec ruff
+      - name: Format (ruff format --check)
+        run: uv run ruff format --check src
+
       # 7. Vérification des types avec mypy
       - name: Type check (mypy)
         run: uv run mypy src
