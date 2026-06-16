@@ -5,9 +5,9 @@ Dataset : Airline Passenger Satisfaction
 Cible   : satisfaction  →  1 (satisfied) / 0 (neutral or dissatisfied)
 
 Lancement :
-    python -m mlproject.train_models
-    python -m mlproject.train_models --cv 3 --scoring roc_auc
-    python -m mlproject.train_models --no-mlflow
+    python -m src/train_models
+    python -m src/train_models --cv 3 --scoring roc_auc
+    python -m src/train_models --no-mlflow
 """
 from __future__ import annotations
 
@@ -37,10 +37,10 @@ from sklearn.pipeline import Pipeline
 from xgboost import XGBClassifier
 from lightgbm import LGBMClassifier
 
-from config import MODEL_DIR, MODEL_NAME, RANDOM_STATE
-from data import load_data, split
-from features import build_preprocessor
-from tracking import log_dataset, setup_experiment
+from src.config import MODEL_DIR, MODEL_NAME, RANDOM_STATE
+from src.data import load_data, split
+from src.features import build_preprocessor
+from src.tracking import log_dataset, setup_experiment
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)

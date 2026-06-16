@@ -4,7 +4,7 @@ from __future__ import annotations
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
-from config import (
+from src.config import (
     DATA_PATH,
     DROP_COLS,
     RANDOM_STATE,

@@ -26,15 +26,15 @@ import mlflow.models
 from mlflow.exceptions import MlflowException
 from mlflow.models import MetricThreshold
 
-from config import (
+from src.config import (
     DATA_PATH,
     EVAL_F1_MIN,
     EVAL_ROC_AUC_MIN,
     MODEL_NAME,
     TARGET,
 )
-from data import load_data, split
-from tracking import setup_experiment
+from src.data import load_data, split
+from src.tracking import setup_experiment
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
