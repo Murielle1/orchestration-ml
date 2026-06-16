@@ -1,0 +1,53 @@
+name: CI — Qualité du code
+
+on:
+  push:
+    branches: ["**"]
+
+jobs:
+  quality:
+    name: Lint · Types · Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Récupération du code
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2. Installation de uv
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      # 3. Installation de Python via uv (version définie dans pyproject.toml)
+      - name: Set up Python
+        run: uv python install
+
+      # 4. Installation des dépendances (prod + dev)
+      - name: Install dependencies
+        run: uv sync --extra dev
+
+      # 5. Vérification du style avec ruff
+      - name: Lint (ruff check)
+        run: uv run ruff check mlproject
+
+      # 6. Vérification du formatage avec ruff
+      - name: Format (ruff format --check)
+        run: uv run ruff format --check mlproject
+
+      # 7. Vérification des types avec mypy
+      - name: Type check (mypy)
+        run: uv run mypy mlproject
+
+      # 8. Tests unitaires avec pytest + rapport de couverture
+      - name: Tests (pytest)
+        run: uv run pytest --cov=mlproject --cov-report=xml --cov-report=term-missing
+
+      # 9. Upload du rapport de couverture vers Codecov (optionnel)
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        if: always()   # même si les tests échouent
+        with:
+          files: ./coverage.xml
+          fail_ci_if_error: false
