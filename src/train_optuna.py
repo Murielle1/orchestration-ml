@@ -328,7 +328,6 @@ def log_family_to_mlflow(
         active_run = mlflow.active_run()
         if active_run:
             logger.info("Run MLflow : %s", active_run.info.run_id)
-        
 
         # SHAP summary (optionnel — nécessite shap installé)
         _log_shap_summary(result.best_pipeline, x_test, result.spec.name)
