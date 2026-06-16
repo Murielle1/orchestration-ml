@@ -115,7 +115,7 @@ data: ## Télécharge le dataset Kaggle dans data/raw/
 features: ## Génère les features prétraitées dans data/processed/
 	# TODO (S0) : prépare X_train, X_test encodés + pipeline joblib
 	@echo "$(YELLOW)>> Feature engineering...$(RESET)"
-	$(PYTHON) -m mlproject.features \
+	$(PYTHON) -m src.features \
 		--train-path $(TRAIN_CSV) \
 		--test-path  $(TEST_CSV) \
 		--output-dir $(PROCESSED_DIR)
@@ -124,20 +124,20 @@ features: ## Génère les features prétraitées dans data/processed/
 train: ## Entraîne la baseline → models/model.joblib (C=.. MAX_ITER=..)
 	# TODO (S5) : instrumenter avec MLflow Tracking
 	@echo "$(YELLOW)>> Entraînement baseline (C=$(C) max_iter=$(MAX_ITER))...$(RESET)"
-	$(PYTHON) -m mlproject.train --c $(C) --max-iter $(MAX_ITER)
+	$(PYTHON) -m src.train --c $(C) --max-iter $(MAX_ITER)
 	@echo "$(GREEN)[OK] Modèle sauvegardé dans models/$(RESET)"
 
 train-models: ## Compare RF / XGBoost / LightGBM (GridSearchCV) + SHAP (CV=.. SCORING=..)
-	# TODO (S7) : $(PYTHON) -m mlproject.train_models --cv $(CV) --scoring $(SCORING)
+	# TODO (S7) : $(PYTHON) -m src.train_models --cv $(CV) --scoring $(SCORING)
 
 train-optuna: ## Optimise RF / XGBoost / LightGBM avec Optuna (N_TRIALS=.. CV=..)
-	# TODO (S6) : $(PYTHON) -m mlproject.train_optuna --n-trials $(N_TRIALS) --cv $(CV)
+	# TODO (S6) : $(PYTHON) -m src.train_optuna --n-trials $(N_TRIALS) --cv $(CV)
 
 mlflow: ## Démarre le serveur MLflow (docker compose)
 	# TODO (S5) : docker compose -f docker-compose.yml up -d mlflow
 
 api: ## Lance l'API FastAPI en rechargement auto (voir API_HOST/API_PORT)
-	# TODO (S12) : $(RUN) uvicorn mlproject.api:app --reload --host $(API_HOST) --port $(API_PORT)
+	# TODO (S12) : $(RUN) uvicorn src.api:app --reload --host $(API_HOST) --port $(API_PORT)
 
 frontend: ## Lance le frontend Streamlit (voir FRONTEND_PORT, API_URL)
 	# TODO (S14bis) : $(RUN) streamlit run frontend/app.py --server.port $(FRONTEND_PORT)
@@ -148,10 +148,10 @@ frontend: ## Lance le frontend Streamlit (voir FRONTEND_PORT, API_URL)
 # ==============================================================================
 
 docker-build: ## Construit l'image d'entraînement
-	# TODO (S8) : docker build -f docker/Dockerfile.train -t mlproject-train .
+	# TODO (S8) : docker build -f docker/Dockerfile.train -t src-train .
 
 docker-run: ## Lance l'entraînement en conteneur
-	# TODO (S8) : docker run --rm -v "$(CURDIR)/../models:/app/models" mlproject-train
+	# TODO (S8) : docker run --rm -v "$(CURDIR)/../models:/app/models" src-train
 
 docker-up: ## Démarre la stack complète (mlflow, api, frontend)
 	# TODO (S14) : docker compose -f docker-compose.yml up -d --build mlflow api frontend
@@ -165,13 +165,13 @@ docker-down: ## Arrête et supprime les conteneurs (conserve les volumes)
 # ==============================================================================
 
 lint: ## Vérifie le style (ruff)
-	$(RUN) ruff check mlproject
+	$(RUN) ruff check src
 
 format: ## Formate le code (ruff)
-	$(RUN) ruff format mlproject
+	$(RUN) ruff format src
 
 type: ## Vérifie les types (mypy)
-	$(RUN) mypy mlproject
+	$(RUN) mypy src
 
 test: ## Lance les tests (pytest)
 	$(RUN) pytest
