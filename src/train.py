@@ -1,8 +1,6 @@
 """Entraînement du modèle de classification (baseline).
 
 Séance 5 - TP MLflow Tracking
-    Ce script entraîne et évalue un modèle AVEC suivi d'expérience MLflow.
-
 Dataset : Airline Passenger Satisfaction
 Cible   : satisfaction  →  1 (satisfied) / 0 (neutral or dissatisfied)
 """
@@ -24,20 +22,14 @@ from sklearn.metrics import (
 )
 from sklearn.pipeline import Pipeline
 
-from config import (
-    MODEL_DIR,
-    MLFLOW_EXPERIMENT,
-    MLFLOW_EXPERIMENT_DESCRIPTION,
-    MLFLOW_EXPERIMENT_TAGS,
-    MLFLOW_TRACKING_URI,
-    MODEL_NAME,
-)
+from config import MODEL_DIR, MODEL_NAME
 from data import load_data, split
 from features import build_preprocessor
+from tracking import log_dataset, setup_experiment
 
 
 # ---------------------------------------------------------------------------
-# Construction du pipeline complet
+# Construction du pipeline
 # ---------------------------------------------------------------------------
 
 def build_model(c: float = 1.0, max_iter: int = 1000) -> Pipeline:
@@ -70,15 +62,16 @@ def train(c: float = 1.0, max_iter: int = 1000) -> dict:
     print(f"Train : {len(x_train):,} lignes | Val : {len(x_val):,} lignes")
     print(f"Distribution cible (val) — satisfied : {y_val.mean():.2%}")
 
-    # --- Configuration MLflow ----------------------------------------------
-    mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
-    mlflow.set_experiment(MLFLOW_EXPERIMENT)
+    # --- Configuration MLflow (via tracking.py) ----------------------------
+    setup_experiment()
 
     # --- Run MLflow --------------------------------------------------------
     with mlflow.start_run(
-        tags={**MLFLOW_EXPERIMENT_TAGS, "model_type": "logistic_regression"},
-        description=MLFLOW_EXPERIMENT_DESCRIPTION,
+        tags={"model_type": "logistic_regression"},
     ):
+        # Traçabilité des données
+        log_dataset(df, context="training", name="train")
+
         # Entraînement
         model = build_model(c=c, max_iter=max_iter)
         model.fit(x_train, y_train)
@@ -100,26 +93,21 @@ def train(c: float = 1.0, max_iter: int = 1000) -> dict:
             )
         )
 
-        # Logger les paramètres
+        # Logger paramètres, métriques et modèle
         mlflow.log_params({"c": c, "max_iter": max_iter})
-
-        # Logger les métriques
         mlflow.log_metrics(metrics)
-
-        # Logger le modèle
         mlflow.sklearn.log_model(
             sk_model=model,
             artifact_path="model",
             registered_model_name=MODEL_NAME,
         )
 
-        # Logger la matrice de confusion (bonus S5-7)
+        # Matrice de confusion
         cm_path = _save_confusion_matrix(y_val, preds)
         mlflow.log_artifact(str(cm_path))
 
-        # Afficher l'URL du run
         run_id = mlflow.active_run().info.run_id
-        print(f"\nRun MLflow : {MLFLOW_TRACKING_URI}/#/runs/{run_id}")
+        print(f"\nRun MLflow : {run_id}")
 
     # --- Sauvegarde locale -------------------------------------------------
     MODEL_DIR.mkdir(parents=True, exist_ok=True)
@@ -131,7 +119,6 @@ def train(c: float = 1.0, max_iter: int = 1000) -> dict:
 
 
 def _save_confusion_matrix(y_true, y_pred):
-    """Génère et sauvegarde la matrice de confusion en PNG."""
     fig, ax = plt.subplots(figsize=(5, 4))
     ConfusionMatrixDisplay.from_predictions(
         y_true,
@@ -142,7 +129,6 @@ def _save_confusion_matrix(y_true, y_pred):
     )
     ax.set_title("Matrice de confusion — validation")
     fig.tight_layout()
-
     MODEL_DIR.mkdir(parents=True, exist_ok=True)
     cm_path = MODEL_DIR / "confusion_matrix.png"
     fig.savefig(cm_path, dpi=120)
