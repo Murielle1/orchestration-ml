@@ -99,10 +99,10 @@ jobs:
           KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
         run: |
           uv run pip install kaggle --quiet
-          mkdir -p data/raw
+          mkdir -p data/
           uv run kaggle datasets download \
             -d teejmahal20/airline-passenger-satisfaction \
-            --path data/raw --unzip
+            --path data/ --unzip
 
       - name: Entraînement de la baseline
         env:
