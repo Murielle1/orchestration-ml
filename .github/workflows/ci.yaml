@@ -107,9 +107,9 @@ jobs:
       - name: Entraînement de la baseline
         env:
           # Mode local : pas de serveur MLflow en CI, on stocke dans mlruns/
-          MLFLOW_TRACKING_URI: ""
+          MLFLOW_TRACKING_URI: "sqlite:///mlruns.db"
+          MLFLOW_ALLOW_FILE_STORE: "false"
         run: uv run python -m src.train --c 1.0 --max-iter 1000
-
       # S18-8 : publication du modèle en artefact téléchargeable
       - name: Publication du modèle en artefact
         uses: actions/upload-artifact@v4
