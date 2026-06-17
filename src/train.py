@@ -102,6 +102,7 @@ def train(c: float = 1.0, max_iter: int = 1000) -> dict:
             sk_model=model,
             artifact_path="model",
             registered_model_name=MODEL_NAME,
+            skops_trusted_types=["numpy.dtype"],  
         )
 
         # Matrice de confusion

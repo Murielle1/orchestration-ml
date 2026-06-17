@@ -235,6 +235,7 @@ def log_run_to_mlflow(
             signature=signature,
             input_example=x_test.iloc[:5],
             registered_model_name=register_as,
+            skops_trusted_types=["numpy.dtype"],  
         )
 
         # Documentation dans le Registry (bonus S7-5)

@@ -340,6 +340,7 @@ def log_family_to_mlflow(
             signature=signature,
             input_example=x_test.iloc[:5],
             registered_model_name=register_as,
+            skops_trusted_types=["numpy.dtype"],  
         )
 
         # S6-7 bonus : documentation dans le Registry
