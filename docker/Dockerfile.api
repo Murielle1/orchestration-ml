@@ -1,0 +1,28 @@
+# Image de l'API FastAPI d'inférence.
+# Build : docker build -f docker/Dockerfile.api -t mlproject-api .
+# Run   : docker run --rm -p 8000:8000 -v "$PWD/models:/app/models:ro" mlproject-api
+
+FROM python:3.13-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app/src
+
+WORKDIR /app
+
+# libgomp1 : runtime OpenMP requis pour désérialiser un modèle LightGBM
+RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Dépendances en premier pour profiter du cache de layers
+COPY pyproject.toml ./
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir .
+
+# Code source
+COPY src/ ./src/
+
+# models/ sera monté en volume read-only au runtime (model.joblib)
+RUN mkdir -p models/
+
+EXPOSE 8000
+CMD ["uvicorn", "src.api:app", "--host", "0.0.0.0", "--port", "8000"]

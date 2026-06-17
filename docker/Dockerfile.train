@@ -1,0 +1,37 @@
+# Séance 8 - TP Docker : conteneurisation de l'entraînement.
+# Objectif : une image qui exécute `python -m src.train` de façon reproductible.
+# Build  : docker build -f docker/Dockerfile.train -t mlproject-train .
+# Run    : docker run --rm -v "$PWD/models:/app/models" mlproject-train
+
+# S8-1 : image de base Python 3.13 slim
+FROM python:3.13-slim
+
+# S8-2 : variables d'environnement et dossier de travail
+ENV PYTHONUNBUFFERED=1 \
+    # PYTHONPATH pointe vers /app pour que `import config`, `import data`... fonctionnent
+    PYTHONPATH=/app/src \
+    # MLflow en mode SQLite local par défaut (surchargeable via -e au docker run)
+    MLFLOW_TRACKING_URI=sqlite:///mlruns.db
+
+WORKDIR /app
+
+# libgomp1 : runtime OpenMP requis par LightGBM
+# libgomp1 est installé avant les dépendances Python pour profiter du cache
+RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# S8-3 : copier pyproject.toml EN PREMIER pour profiter du cache de layers
+# Si seul le code change, cette layer (pip install) n'est pas reconstruite
+COPY pyproject.toml .
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir .
+
+# S8-4 : copier le package src/ et les données
+COPY src/ ./src/
+COPY data/ ./data/
+
+# Créer le dossier models/ (sera monté en volume au runtime)
+RUN mkdir -p models/
+
+# S8-5 : commande par défaut — entraîne la baseline
+CMD ["python", "-m", "src.train"]

@@ -1,0 +1,100 @@
+# Séance 14 - TP docker-compose : orchestrez votre stack de classification.
+#
+# Services : mlflow (suivi), train (entraînement one-shot, profil "train"),
+#            api (FastAPI) et frontend (Streamlit).
+#
+# Commandes (depuis la racine du projet) :
+#   docker compose up -d mlflow
+#   docker compose --profile train run --rm train
+#   docker compose up -d api frontend
+#   -> API sur http://localhost:8000, frontend sur http://localhost:8501
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # MLflow : serveur de tracking et registry
+  # ---------------------------------------------------------------------------
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v3.13.0
+    command: >
+      mlflow server
+      --host 0.0.0.0 --port 5000
+      --backend-store-uri sqlite:////mlflow/mlflow.db
+      --artifacts-destination /mlflow/artifacts
+      --serve-artifacts
+      --allowed-hosts "*"
+    ports:
+      - "5001:5000"
+    volumes:
+      - mlflow_data:/mlflow
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ---------------------------------------------------------------------------
+  # Train : entraînement one-shot (profil "train")
+  # ---------------------------------------------------------------------------
+  train:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.train
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+    depends_on:
+      mlflow:
+        condition: service_healthy
+    volumes:
+      - models_data:/app/models
+    # Le profil "train" évite que ce service one-shot démarre avec `up`.
+    profiles:
+      - train
+
+  # ---------------------------------------------------------------------------
+  # API : inférence FastAPI
+  # ---------------------------------------------------------------------------
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    # S14-1 : exposition du port 8000
+    ports:
+      - "8000:8000"
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      MODEL_VERSION: "latest"
+    depends_on:
+      mlflow:
+        condition: service_healthy
+    # S14-2 : volume models_data en lecture seule pour lire model.joblib
+    volumes:
+      - models_data:/app/models:ro
+    # S14-3 : healthcheck sur GET /health
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # # ---------------------------------------------------------------------------
+  # # Frontend : interface Streamlit
+  # # ---------------------------------------------------------------------------
+  # frontend:
+  #   build:
+  #     context: .
+  #     dockerfile: docker/Dockerfile.frontend
+  #   ports:
+  #     - "8501:8501"
+  #   environment:
+  #     API_URL: http://api:8000
+  #   depends_on:
+  #     api:
+  #       condition: service_healthy
+
+# ---------------------------------------------------------------------------
+# Volumes partagés
+# ---------------------------------------------------------------------------
+volumes:
+  mlflow_data:    # données MLflow (SQLite + artefacts)
+  models_data:    # model.joblib produit par train, consommé par api

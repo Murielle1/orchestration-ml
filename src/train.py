@@ -100,7 +100,7 @@ def train(c: float = 1.0, max_iter: int = 1000) -> dict:
         mlflow.log_metrics(metrics)
         mlflow.sklearn.log_model(
             sk_model=model,
-            artifact_path="model",
+            name="model",
             registered_model_name=MODEL_NAME,
             skops_trusted_types=["numpy.dtype"],
         )
