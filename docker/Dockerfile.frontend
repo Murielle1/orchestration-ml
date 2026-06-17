@@ -1,0 +1,23 @@
+# Image du frontend Streamlit.
+# Build : docker build -f docker/Dockerfile.frontend -t mlproject-frontend .
+# Run   : docker run --rm -p 8501:8501 -e API_URL=http://host.docker.internal:8000 mlproject-frontend
+
+FROM python:3.13-slim
+
+ENV PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+# Dépendances en premier pour profiter du cache de layers
+COPY pyproject.toml ./
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir .
+
+# Code du frontend
+COPY frontend/ ./frontend/
+
+EXPOSE 8501
+CMD ["streamlit", "run", "frontend/app.py", \
+     "--server.address", "0.0.0.0", \
+     "--server.port", "8501", \
+     "--server.headless", "true"]

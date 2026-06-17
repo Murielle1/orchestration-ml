@@ -77,20 +77,20 @@ services:
       timeout: 5s
       retries: 10
 
-  # # ---------------------------------------------------------------------------
-  # # Frontend : interface Streamlit
-  # # ---------------------------------------------------------------------------
-  # frontend:
-  #   build:
-  #     context: .
-  #     dockerfile: docker/Dockerfile.frontend
-  #   ports:
-  #     - "8501:8501"
-  #   environment:
-  #     API_URL: http://api:8000
-  #   depends_on:
-  #     api:
-  #       condition: service_healthy
+  # ---------------------------------------------------------------------------
+  # Frontend : interface Streamlit
+  # ---------------------------------------------------------------------------
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+    ports:
+      - "8501:8501"
+    environment:
+      API_URL: http://api:8000
+    depends_on:
+      api:
+        condition: service_healthy
 
 # ---------------------------------------------------------------------------
 # Volumes partagés
