@@ -1,50 +1,119 @@
-name: CI — Qualité du code
+# TP Séance 18 - Intégration continue (CI) avec GitHub Actions
+#
+# Placez ce fichier dans .github/workflows/ à la RACINE de votre dépôt.
+# Pipeline : qualité du code (lint + types + tests) → entraînement baseline
+#
+# Dataset : Airline Passenger Satisfaction
+# Package : src/
 
+name: CI
+
+# S18-1 : déclenchement sur push, pull_request et manuellement
 on:
   push:
     branches: ["**"]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+# Annule un run en cours si on repousse sur la même ref (économise des minutes).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Permissions minimales par défaut.
+permissions:
+  contents: read
 
 jobs:
+  # ---------------------------------------------------------------------------
+  # 1. Qualité : lint (ruff) + types (mypy) + tests (pytest)
+  # ---------------------------------------------------------------------------
   quality:
-    name: Lint · Types · Tests
+    name: Qualité (lint + types + tests)
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Récupération du code
-      - name: Checkout
+      - name: Checkout du dépôt
         uses: actions/checkout@v4
 
-      # 2. Installation de uv
-      - name: Install uv
-        uses: astral-sh/setup-uv@v4
+      - name: Installation de uv (avec cache)
+        uses: astral-sh/setup-uv@v8.2.0
         with:
-          version: "latest"
+          enable-cache: true
+          cache-dependency-glob: uv.lock
 
-      # 3. Installation de Python via uv (version définie dans pyproject.toml)
-      - name: Set up Python
-        run: uv python install
-
-      # 4. Installation des dépendances (prod + dev)
-      - name: Install dependencies
+      # S18-2 : installation du projet + outils dev
+      - name: Installation des dépendances (projet + dev)
         run: uv sync --extra dev
 
-      # 5. Vérification du style avec ruff
+      # S18-3 : lint
       - name: Lint (ruff check)
         run: uv run ruff check src
 
-      # 6. Vérification du formatage avec ruff
+      # Formatage (vérifie sans modifier)
       - name: Format (ruff format --check)
         run: uv run ruff format --check src
 
-      # 7. Vérification des types avec mypy
-      - name: Type check (mypy)
+      # S18-4 : types
+      - name: Types (mypy)
         run: uv run mypy src
 
+      # S18-5 : tests
+      - name: Tests (pytest)
+        run: uv run pytest --cov=src --cov-report=xml --cov-report=term-missing
 
-      # 9. Upload du rapport de couverture vers Codecov (optionnel)
       - name: Upload coverage
         uses: codecov/codecov-action@v4
-        if: always()   # même si les tests échouent
+        if: always()
         with:
           files: ./coverage.xml
           fail_ci_if_error: false
+
+  # ---------------------------------------------------------------------------
+  # 2. Entraînement : entraîne la baseline et publie le modèle en artefact
+  # ---------------------------------------------------------------------------
+  train:
+    name: Entraînement (Continuous Training)
+    runs-on: ubuntu-latest
+    # S18-6 : ce job ne s'exécute QUE si quality est vert
+    needs: quality
+
+    steps:
+      - name: Checkout du dépôt
+        uses: actions/checkout@v4
+
+      - name: Installation de uv (avec cache)
+        uses: astral-sh/setup-uv@v8.2.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Installation des dépendances
+        run: uv sync
+
+      # S18-7 : préparation des données + entraînement
+      - name: Téléchargement du dataset (Kaggle)
+        env:
+          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+          KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
+        run: |
+          uv run pip install kaggle --quiet
+          mkdir -p data/raw
+          uv run kaggle datasets download \
+            -d teejmahal20/airline-passenger-satisfaction \
+            --path data/raw --unzip
+
+      - name: Entraînement de la baseline
+        env:
+          # Mode local : pas de serveur MLflow en CI, on stocke dans mlruns/
+          MLFLOW_TRACKING_URI: ""
+        run: uv run python -m src.train --c 1.0 --max-iter 1000
+
+      # S18-8 : publication du modèle en artefact téléchargeable
+      - name: Publication du modèle en artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: model
+          path: models/model.joblib
+          retention-days: 7   # conservé 7 jours
