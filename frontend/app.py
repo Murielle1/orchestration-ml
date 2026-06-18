@@ -293,7 +293,7 @@ with left_col:
     st.markdown(f"""
     <div class="side-panel">
         <div class="side-title">🔗 Liens rapides</div>
-        <a class="ql-btn ql-docs"    href="{api_url}/docs"  target="_blank">📖 API Docs</a>
+        <a class="ql-btn ql-docs"    href="http://141.145.217.77:8000/docs"  target="_blank">📖 API Docs</a>
         <a class="ql-btn ql-mlflow"  href="{MLFLOW_URL}"    target="_blank">📊 MLflow</a>
         <a class="ql-btn ql-airflow" href="{AIRFLOW_URL}"   target="_blank">🌬️ Airflow</a>
         <a class="ql-btn ql-github"  href="{GITHUB_URL}"    target="_blank">🐙 GitHub</a>
