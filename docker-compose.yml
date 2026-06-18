@@ -7,7 +7,7 @@
 #   docker compose up -d mlflow
 #   docker compose --profile train run --rm train
 #   docker compose up -d api frontend
-#   -> API sur http://localhost:8000, frontend sur http://localhost:8501
+#   -> API sur http://<IP_PUBLIQUE>:8000, frontend sur http://<IP_PUBLIQUE>:8501
 
 services:
 
@@ -16,6 +16,7 @@ services:
   # ---------------------------------------------------------------------------
   mlflow:
     image: ghcr.io/mlflow/mlflow:v3.13.0
+    restart: unless-stopped
     command: >
       mlflow server
       --host 0.0.0.0 --port 5000
@@ -24,7 +25,7 @@ services:
       --serve-artifacts
       --allowed-hosts "*"
     ports:
-      - "5001:5000"
+      - "0.0.0.0:5001:5000"
     volumes:
       - mlflow_data:/mlflow
     healthcheck:
@@ -47,7 +48,7 @@ services:
         condition: service_healthy
     volumes:
       - models_data:/app/models
-    # Le profil "train" évite que ce service one-shot démarre avec `up`.
+      - ./data:/app/data:ro
     profiles:
       - train
 
@@ -58,19 +59,18 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.api
-    # S14-1 : exposition du port 8000
+    restart: unless-stopped
     ports:
-      - "8000:8000"
+      - "0.0.0.0:8000:8000"
     environment:
       MLFLOW_TRACKING_URI: http://mlflow:5000
       MODEL_VERSION: "latest"
     depends_on:
       mlflow:
         condition: service_healthy
-    # S14-2 : volume models_data en lecture seule pour lire model.joblib
     volumes:
       - models_data:/app/models:ro
-    # S14-3 : healthcheck sur GET /health
+      - ./data:/app/data:ro
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 5s
@@ -84,8 +84,9 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.frontend
+    restart: unless-stopped
     ports:
-      - "8501:8501"
+      - "0.0.0.0:8501:8501"
     environment:
       API_URL: http://api:8000
     depends_on:
@@ -96,5 +97,5 @@ services:
 # Volumes partagés
 # ---------------------------------------------------------------------------
 volumes:
-  mlflow_data:    # données MLflow (SQLite + artefacts)
-  models_data:    # model.joblib produit par train, consommé par api
+  mlflow_data:
+  models_data:
