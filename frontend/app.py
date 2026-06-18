@@ -1,5 +1,4 @@
 """Frontend Streamlit — Airline Passenger Satisfaction.
-Thème : vacances d'été, soleil, mer, évasion.
 Séance 14 bis - TP Streamlit
 """
 from __future__ import annotations
@@ -11,137 +10,324 @@ import streamlit as st
 
 API_URL = os.environ.get("API_URL", "http://127.0.0.1:8000")
 
-# ---------------------------------------------------------------------------
-# Style — palette été / vacances
-# Corail chaud, turquoise, sable, blanc crème, orange soleil
-# ---------------------------------------------------------------------------
 st.set_page_config(
-    page_title="✈️ Satisfaction Passager",
-    page_icon="🌴",
+    page_title="✈️ SkyScore — Satisfaction Prédictive",
+    page_icon="🛫",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
 )
 
+# ---------------------------------------------------------------------------
+# CSS global
+# ---------------------------------------------------------------------------
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Pacifico&family=Nunito:wght@400;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Pacifico&family=Nunito:wght@400;600;700;800;900&display=swap');
 
-/* Fond dégradé mer / ciel */
-[data-testid="stAppViewContainer"] {
-    background: #FFFFFF;
-    min-height: 100vh;
+* { font-family: 'Nunito', sans-serif; }
+
+[data-testid="stAppViewContainer"] { background: #FFFFFF; }
+[data-testid="stHeader"]           { background: #FFFFFF; }
+[data-testid="stSidebar"]          { background: #F7F9FC; border-right: 1px solid #E8ECF0; }
+
+/* Hero banner */
+.hero-banner {
+    background: linear-gradient(135deg, #1A1A2E 0%, #16213E 50%, #0F3460 100%);
+    border-radius: 24px;
+    padding: 3rem 3.5rem;
+    color: white;
+    margin-bottom: 2rem;
+    position: relative;
+    overflow: hidden;
 }
-[data-testid="stHeader"] { background: #FFFFFF; }
-
-/* Titre principal */
+.hero-banner::before {
+    content: "✈";
+    position: absolute;
+    right: 3rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 9rem;
+    opacity: 0.06;
+}
 .hero-title {
     font-family: 'Pacifico', cursive;
-    font-size: 2.8rem;
-    color: #2D6A8F;
-    text-shadow: none;
-    margin-bottom: 0;
+    font-size: 3.2rem;
+    color: #E94560;
+    margin: 0 0 0.3rem 0;
+    letter-spacing: -1px;
 }
 .hero-sub {
-    font-family: 'Nunito', sans-serif;
-    font-size: 1.1rem;
-    color: #555;
-    margin-top: 0;
+    font-size: 1.15rem;
+    color: #A8B8D8;
+    margin: 0;
     font-weight: 600;
+    max-width: 600px;
+    line-height: 1.6;
 }
-
-/* Cards */
-.card {
-    background: rgba(255,255,255,0.85);
-    backdrop-filter: blur(8px);
+.hero-badge {
+    display: inline-block;
+    background: rgba(233,69,96,0.15);
+    border: 1px solid rgba(233,69,96,0.4);
+    color: #E94560;
     border-radius: 20px;
-    padding: 1.5rem 2rem;
-    box-shadow: 0 4px 24px rgba(0,93,115,0.10);
-    margin-bottom: 1.2rem;
-    border: 1.5px solid rgba(255,255,255,0.7);
+    padding: 0.25rem 0.9rem;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
 }
 
-/* Badge résultat */
-.badge-satisfied {
-    background: linear-gradient(135deg, #06D6A0, #1B9AAA);
-    color: white;
-    font-family: 'Pacifico', cursive;
-    font-size: 1.6rem;
+/* Stat cards accueil */
+.stat-card {
+    background: #F7F9FC;
+    border: 1px solid #E8ECF0;
     border-radius: 16px;
+    padding: 1.4rem 1.8rem;
+    text-align: center;
+}
+.stat-number {
+    font-family: 'Pacifico', cursive;
+    font-size: 2.4rem;
+    color: #E94560;
+    display: block;
+    line-height: 1.1;
+}
+.stat-label {
+    font-size: 0.82rem;
+    color: #7A8A9A;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-top: 0.3rem;
+}
+
+/* Feature cards accueil */
+.feature-card {
+    background: #FFFFFF;
+    border: 1.5px solid #E8ECF0;
+    border-radius: 16px;
+    padding: 1.5rem;
+    height: 100%;
+    transition: border-color 0.2s;
+}
+.feature-icon { font-size: 2rem; margin-bottom: 0.6rem; }
+.feature-title { font-weight: 800; color: #1A1A2E; font-size: 1rem; margin-bottom: 0.3rem; }
+.feature-desc  { color: #7A8A9A; font-size: 0.88rem; line-height: 1.5; }
+
+/* Section label */
+.section-label {
+    font-weight: 800;
+    font-size: 0.78rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #7A8A9A;
+    margin-bottom: 0.8rem;
+    border-left: 3px solid #E94560;
+    padding-left: 0.6rem;
+}
+
+/* Badges prédiction */
+.badge-satisfied {
+    background: linear-gradient(135deg, #06D6A0, #0BA07A);
+    color: white;
+    font-weight: 900;
+    font-size: 1.4rem;
+    border-radius: 14px;
     padding: 0.8rem 2rem;
     display: inline-block;
-    box-shadow: 0 4px 16px rgba(6,214,160,0.35);
+    box-shadow: 0 6px 20px rgba(6,214,160,0.30);
 }
 .badge-unsatisfied {
-    background: linear-gradient(135deg, #FF6B35, #F4A261);
+    background: linear-gradient(135deg, #E94560, #C73652);
     color: white;
-    font-family: 'Pacifico', cursive;
-    font-size: 1.6rem;
-    border-radius: 16px;
+    font-weight: 900;
+    font-size: 1.4rem;
+    border-radius: 14px;
     padding: 0.8rem 2rem;
     display: inline-block;
-    box-shadow: 0 4px 16px rgba(255,107,53,0.35);
+    box-shadow: 0 6px 20px rgba(233,69,96,0.30);
 }
 
-/* Section headers */
-.section-label {
-    font-family: 'Nunito', sans-serif;
-    font-weight: 800;
-    font-size: 0.85rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: #2D6A8F;
-    margin-bottom: 0.5rem;
+/* Pill tags */
+.pill {
+    display: inline-block;
+    background: #F0F4FF;
+    color: #3D5AFE;
+    border-radius: 20px;
+    padding: 0.2rem 0.8rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    margin: 0.15rem;
 }
 
-/* Onglets */
-button[data-baseweb="tab"] {
-    font-family: 'Nunito', sans-serif !important;
-    font-weight: 700 !important;
-    font-size: 1rem !important;
-}
-
-/* Métriques */
+/* Metrics override */
 [data-testid="metric-container"] {
-    background: rgba(255,255,255,0.7);
+    background: #F7F9FC;
+    border: 1px solid #E8ECF0;
     border-radius: 14px;
-    padding: 0.8rem 1rem;
+    padding: 1rem 1.2rem;
 }
 
-/* Sliders — accent corail */
-[data-testid="stSlider"] [role="slider"] {
-    background-color: #FF6B35 !important;
+/* Sidebar nav */
+.nav-item {
+    font-weight: 700;
+    color: #1A1A2E;
+    font-size: 0.95rem;
 }
 </style>
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------------------------
-# Hero
+# Sidebar navigation
 # ---------------------------------------------------------------------------
-col_hero, col_api = st.columns([3, 1])
-with col_hero:
-    st.markdown('<p class="hero-title">🌴 Bon Voyage Predictor</p>', unsafe_allow_html=True)
-    st.markdown('<p class="hero-sub">Découvrez si votre vol sera une expérience 5 étoiles ☀️</p>', unsafe_allow_html=True)
-with col_api:
+with st.sidebar:
+    st.markdown("""
+    <div style="text-align:center;padding:1rem 0 1.5rem 0;">
+        <div style="font-family:'Pacifico',cursive;font-size:1.6rem;color:#E94560;">SkyScore</div>
+        <div style="font-size:0.75rem;color:#7A8A9A;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;">
+            MLOps · Classification
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    page = st.radio(
+        "Navigation",
+        ["🏠 Accueil", "🔮 Prédiction", "📊 Performance", "📋 Historique"],
+        label_visibility="collapsed",
+    )
+
+    st.divider()
+    api_url = st.text_input("🔗 URL de l'API", value=API_URL)
+
+    # Statut API
+    try:
+        r = httpx.get(f"{api_url}/health", timeout=2.0)
+        if r.status_code == 200:
+            st.success("API connectée ✅")
+        else:
+            st.error("API erreur ❌")
+    except httpx.HTTPError:
+        st.error("API non joignable ❌")
+
+    st.divider()
+    st.markdown("""
+    <div style="font-size:0.75rem;color:#AAB;text-align:center;line-height:1.7;">
+        Projet MLOps · ESGI 5A<br>
+        Dataset : Airline Passenger<br>Satisfaction (Kaggle)
+    </div>
+    """, unsafe_allow_html=True)
+
+# ===========================================================================
+# PAGE ACCUEIL
+# ===========================================================================
+if page == "🏠 Accueil":
+
+    st.markdown("""
+    <div class="hero-banner">
+        <div class="hero-badge">🛫 Projet MLOps · Classification Binaire</div>
+        <div class="hero-title">SkyScore</div>
+        <p class="hero-sub">
+            Prédisez en temps réel la satisfaction d'un passager aérien
+            grâce à un pipeline ML complet, de l'entraînement au déploiement cloud.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Stats clés
+    s1, s2, s3, s4 = st.columns(4)
+    for col, num, label in zip(
+        [s1, s2, s3, s4],
+        ["103K", "22", ">95%", "3"],
+        ["Passagers analysés", "Variables prédictives", "ROC AUC", "Modèles comparés"],
+    ):
+        col.markdown(f"""
+        <div class="stat-card">
+            <span class="stat-number">{num}</span>
+            <div class="stat-label">{label}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
     st.markdown("<br>", unsafe_allow_html=True)
-    api_url = st.text_input("URL de l'API", value=API_URL, label_visibility="collapsed")
 
-st.divider()
+    # Problématique
+    st.markdown('<p class="section-label">🎯 Problématique</p>', unsafe_allow_html=True)
+    st.markdown("""
+    > **Comment, à partir des données d'un vol et du profil d'un passager,
+    > peut-on prédire automatiquement son niveau de satisfaction ?**
 
-# ---------------------------------------------------------------------------
-# Onglets
-# ---------------------------------------------------------------------------
-predict_tab, metrics_tab, history_tab = st.tabs([
-    "🔮 Prédiction",
-    "📊 Performance du modèle",
-    "📋 Historique",
-])
+    Les compagnies aériennes collectent des milliers de retours à chaque vol mais peinent
+    à les exploiter de manière prédictive. Ce projet construit un **pipeline MLOps complet** :
+    entraînement, tracking, évaluation, API REST et interface utilisateur — le tout
+    conteneurisé et déployé en continu via GitHub Actions.
+    """)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # Features du projet
+    st.markdown('<p class="section-label">🏗️ Architecture du projet</p>', unsafe_allow_html=True)
+    f1, f2, f3 = st.columns(3)
+    features = [
+        ("🤖", "Modèles ML", "Logistic Regression (baseline), Random Forest, XGBoost, LightGBM — optimisés par GridSearchCV et Optuna TPE."),
+        ("📈", "MLflow Tracking", "Chaque run est tracé : paramètres, métriques, artefacts, matrice de confusion et modèle enregistré dans le Registry."),
+        ("🚀", "API FastAPI", "Endpoint /predict exposé via FastAPI avec validation Pydantic, journal des prédictions et métriques en temps réel."),
+        ("🐳", "Docker & CI/CD", "Stack conteneurisée (MLflow + API + Frontend). Pipeline CI/CD GitHub Actions pour la qualité et la livraison."),
+        ("📊", "Dashboard Streamlit", "Interface interactive pour tester le modèle, visualiser les métriques et consulter l'historique des prédictions."),
+        ("🔒", "Porte qualité", "Évaluation automatisée sur test.csv avec seuils ROC AUC ≥ 0.85 et F1 ≥ 0.80 — le modèle est rejeté s'il ne les atteint pas."),
+    ]
+    cols = [f1, f2, f3, f1, f2, f3]
+    for col, (icon, title, desc) in zip(cols, features):
+        col.markdown(f"""
+        <div class="feature-card" style="margin-bottom:1rem;">
+            <div class="feature-icon">{icon}</div>
+            <div class="feature-title">{title}</div>
+            <div class="feature-desc">{desc}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # Dataset
+    st.markdown('<p class="section-label">📊 Dataset</p>', unsafe_allow_html=True)
+    dc1, dc2 = st.columns([2, 1])
+    with dc1:
+        st.markdown("""
+        **Airline Passenger Satisfaction** — Kaggle (teejmahal20)
+
+        Le dataset contient les évaluations de passagers sur leurs vols,
+        avec des informations sur leur profil, le type de voyage, la classe
+        et 14 scores de satisfaction sur les services à bord.
+        """)
+        st.markdown("""
+        <span class="pill">👤 Profil passager</span>
+        <span class="pill">✈️ Infos du vol</span>
+        <span class="pill">📶 Wifi & services</span>
+        <span class="pill">💺 Confort</span>
+        <span class="pill">🍽️ Restauration</span>
+        <span class="pill">🎬 Divertissement</span>
+        <span class="pill">⏱️ Retards</span>
+        """, unsafe_allow_html=True)
+    with dc2:
+        st.markdown("""
+        | Classe | Exemples |
+        |--------|---------|
+        | `1` — Satisfait | 57 % |
+        | `0` — Insatisfait | 43 % |
+        """)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # CTA
+    st.info("👉 Naviguez vers **🔮 Prédiction** dans la barre latérale pour tester le modèle en temps réel !")
 
 # ===========================================================================
-# ONGLET 1 — PRÉDICTION
+# PAGE PRÉDICTION
 # ===========================================================================
-with predict_tab:
+elif page == "🔮 Prédiction":
+    st.markdown('<p style="font-family:Pacifico,cursive;font-size:2rem;color:#1A1A2E;">🔮 Prédire la satisfaction</p>', unsafe_allow_html=True)
+    st.caption("Renseignez les caractéristiques du passager et obtenez une prédiction instantanée.")
+
     with st.form("predict_form"):
-        # --- Profil passager ------------------------------------------------
         st.markdown('<p class="section-label">👤 Profil passager</p>', unsafe_allow_html=True)
         c1, c2, c3 = st.columns(3)
         with c1:
@@ -165,54 +351,41 @@ with predict_tab:
         st.markdown('<p class="section-label">⭐ Évaluations des services (0 = N/A, 1–5)</p>', unsafe_allow_html=True)
         ca, cb = st.columns(2)
         with ca:
-            wifi          = st.slider("📶 Wifi à bord",                     0, 5, 3)
-            time_conv     = st.slider("🕐 Horaires pratiques",               0, 5, 3)
-            online_book   = st.slider("💻 Réservation en ligne",             0, 5, 3)
-            gate_loc      = st.slider("🚪 Emplacement de la porte",          0, 5, 3)
-            food          = st.slider("🍽️ Nourriture & boissons",            0, 5, 3)
-            online_board  = st.slider("📱 Embarquement en ligne",            0, 5, 4)
-            seat_comfort  = st.slider("💺 Confort du siège",                 0, 5, 4)
+            wifi          = st.slider("📶 Wifi à bord",               0, 5, 3)
+            time_conv     = st.slider("🕐 Horaires pratiques",         0, 5, 3)
+            online_book   = st.slider("💻 Réservation en ligne",       0, 5, 3)
+            gate_loc      = st.slider("🚪 Emplacement de la porte",    0, 5, 3)
+            food          = st.slider("🍽️ Nourriture & boissons",      0, 5, 3)
+            online_board  = st.slider("📱 Embarquement en ligne",      0, 5, 4)
+            seat_comfort  = st.slider("💺 Confort du siège",           0, 5, 4)
         with cb:
-            entertainment = st.slider("🎬 Divertissement",                   0, 5, 3)
-            onboard_svc   = st.slider("🛎️ Service à bord",                   0, 5, 4)
-            leg_room      = st.slider("🦵 Espace pour les jambes",           0, 5, 3)
-            baggage       = st.slider("🧳 Gestion des bagages",              0, 5, 4)
-            checkin       = st.slider("🏷️ Enregistrement",                   0, 5, 4)
-            inflight_svc  = st.slider("✈️ Service en vol",                   0, 5, 4)
-            cleanliness   = st.slider("🧹 Propreté",                         0, 5, 4)
+            entertainment = st.slider("🎬 Divertissement",             0, 5, 3)
+            onboard_svc   = st.slider("🛎️ Service à bord",             0, 5, 4)
+            leg_room      = st.slider("🦵 Espace pour les jambes",     0, 5, 3)
+            baggage       = st.slider("🧳 Gestion des bagages",        0, 5, 4)
+            checkin       = st.slider("🏷️ Enregistrement",             0, 5, 4)
+            inflight_svc  = st.slider("✈️ Service en vol",             0, 5, 4)
+            cleanliness   = st.slider("🧹 Propreté",                   0, 5, 4)
 
-        submitted = st.form_submit_button(
-            "🌴 Prédire mon expérience de vol",
-            use_container_width=True,
-        )
+        submitted = st.form_submit_button("🚀 Lancer la prédiction", use_container_width=True)
 
     if submitted:
         payload = {
-            "Gender": gender,
-            "Customer Type": customer_type,
-            "Age": age,
-            "Type of Travel": travel_type,
-            "Class": travel_class,
+            "Gender": gender, "Customer Type": customer_type, "Age": age,
+            "Type of Travel": travel_type, "Class": travel_class,
             "Flight Distance": flight_distance,
             "Departure Delay in Minutes": departure_delay,
             "Arrival Delay in Minutes": float(arrival_delay),
             "Inflight wifi service": wifi,
             "Departure/Arrival time convenient": time_conv,
-            "Ease of Online booking": online_book,
-            "Gate location": gate_loc,
-            "Food and drink": food,
-            "Online boarding": online_board,
-            "Seat comfort": seat_comfort,
-            "Inflight entertainment": entertainment,
-            "On-board service": onboard_svc,
-            "Leg room service": leg_room,
-            "Baggage handling": baggage,
-            "Checkin service": checkin,
-            "Inflight service": inflight_svc,
-            "Cleanliness": cleanliness,
+            "Ease of Online booking": online_book, "Gate location": gate_loc,
+            "Food and drink": food, "Online boarding": online_board,
+            "Seat comfort": seat_comfort, "Inflight entertainment": entertainment,
+            "On-board service": onboard_svc, "Leg room service": leg_room,
+            "Baggage handling": baggage, "Checkin service": checkin,
+            "Inflight service": inflight_svc, "Cleanliness": cleanliness,
         }
-
-        with st.spinner("🌊 Analyse en cours..."):
+        with st.spinner("Analyse en cours..."):
             try:
                 response = httpx.post(f"{api_url}/predict", json=payload, timeout=10.0)
                 response.raise_for_status()
@@ -227,47 +400,38 @@ with predict_tab:
             label       = result["label"]
 
             st.markdown("<br>", unsafe_allow_html=True)
-
             if prediction == 1:
-                st.markdown(
-                    '<div style="text-align:center"><span class="badge-satisfied">🌟 Voyage réussi — Satisfait !</span></div>',
-                    unsafe_allow_html=True,
-                )
+                st.markdown('<div style="text-align:center"><span class="badge-satisfied">🌟 Passager Satisfait</span></div>', unsafe_allow_html=True)
             else:
-                st.markdown(
-                    '<div style="text-align:center"><span class="badge-unsatisfied">🌧️ Expérience mitigée — Insatisfait</span></div>',
-                    unsafe_allow_html=True,
-                )
+                st.markdown('<div style="text-align:center"><span class="badge-unsatisfied">⚠️ Passager Insatisfait</span></div>', unsafe_allow_html=True)
 
             st.markdown("<br>", unsafe_allow_html=True)
             m1, m2, m3 = st.columns(3)
-            with m1:
-                st.metric("Prédiction", label)
-            with m2:
-                st.metric("Score de satisfaction", f"{probability:.1%}")
-            with m3:
-                st.metric("Classe prédite", str(prediction), help="1 = satisfied | 0 = dissatisfied")
+            with m1: st.metric("Prédiction", label)
+            with m2: st.metric("Score de satisfaction", f"{probability:.1%}")
+            with m3: st.metric("Classe", str(prediction))
 
-            # Jauge colorée
-            color = "#06D6A0" if prediction == 1 else "#FF6B35"
+            color = "#06D6A0" if prediction == 1 else "#E94560"
             st.markdown(f"""
-            <div style="background:#e8f4f8;border-radius:12px;height:22px;margin:1rem 0;overflow:hidden;">
-              <div style="width:{probability*100:.1f}%;height:100%;background:linear-gradient(90deg,{color},{color}aa);
-                          border-radius:12px;transition:width 0.6s ease;display:flex;align-items:center;
-                          justify-content:flex-end;padding-right:8px;">
-                <span style="color:white;font-size:0.75rem;font-weight:700;">{probability:.1%}</span>
+            <div style="background:#F0F4F8;border-radius:10px;height:20px;margin:1rem 0;overflow:hidden;">
+              <div style="width:{probability*100:.1f}%;height:100%;
+                          background:linear-gradient(90deg,{color},{color}99);border-radius:10px;">
               </div>
+            </div>
+            <div style="text-align:right;font-size:0.8rem;color:#7A8A9A;margin-top:-0.5rem;">
+                Score : {probability:.1%}
             </div>
             """, unsafe_allow_html=True)
 
-            with st.expander("🔍 Détail JSON"):
+            with st.expander("🔍 Réponse JSON brute"):
                 st.json(result)
 
 # ===========================================================================
-# ONGLET 2 — MÉTRIQUES DU MODÈLE
+# PAGE PERFORMANCE
 # ===========================================================================
-with metrics_tab:
-    st.markdown('<p class="section-label">Performance du modèle en production</p>', unsafe_allow_html=True)
+elif page == "📊 Performance":
+    st.markdown('<p style="font-family:Pacifico,cursive;font-size:2rem;color:#1A1A2E;">📊 Performance du modèle</p>', unsafe_allow_html=True)
+    st.caption("Métriques évaluées sur test.csv — données jamais vues pendant l'entraînement.")
 
     with st.spinner("Chargement des métriques..."):
         try:
@@ -278,41 +442,40 @@ with metrics_tab:
         except httpx.HTTPError:
             info_ok = metrics_ok = False
 
-    # --- Infos du modèle ---
     if info_ok:
         info = resp_info.json()
         ci, cv, cl = st.columns(3)
-        with ci:
-            st.metric("Version", info.get("version", "—"))
-        with cv:
-            st.metric("Modèle chargé", "✅ Oui" if info.get("loaded") else "❌ Non")
-        with cl:
-            st.metric("Chemin", info.get("model_path", "—"))
+        with ci: st.metric("Version", info.get("version", "—"))
+        with cv: st.metric("Modèle chargé", "✅ Oui" if info.get("loaded") else "❌ Non")
+        with cl: st.metric("Fichier", info.get("model_path", "—"))
     else:
-        st.warning("API non joignable — vérifiez que l'API est démarrée.")
+        st.warning("API non joignable.")
 
     st.divider()
 
-    # --- Métriques + matrice + importances ----------------------------------
     if metrics_ok:
         data = resp_metrics.json()
 
-        # Métriques clés
-        st.markdown('<p class="section-label">📈 Métriques d\'évaluation (test.csv)</p>', unsafe_allow_html=True)
+        st.markdown('<p class="section-label">📈 Métriques clés (test.csv)</p>', unsafe_allow_html=True)
         mk = st.columns(4)
-        metrics_map = {
-            "ROC AUC":  ("roc_auc",  "🎯"),
-            "F1-score": ("f1",       "⚖️"),
-            "Accuracy": ("accuracy", "✅"),
-            "Recall":   ("recall",   "📡"),
-        }
-        for col, (label_m, icon) in zip(mk, metrics_map.items()):
-            val = data.get("metrics", {}).get(metrics_map[label_m][0])
-            col.metric(f"{icon} {label_m}", f"{val:.3f}" if val else "—")
+        for col, (label_m, key, icon, threshold) in zip(mk, [
+            ("ROC AUC",  "roc_auc",  "🎯", 0.85),
+            ("F1-score", "f1",       "⚖️", 0.80),
+            ("Accuracy", "accuracy", "✅", None),
+            ("Recall",   "recall",   "📡", None),
+        ]):
+            val = data.get("metrics", {}).get(key)
+            delta = f"seuil ≥ {threshold}" if threshold else None
+            col.metric(
+                f"{icon} {label_m}",
+                f"{val:.3f}" if val is not None else "—",
+                delta=delta,
+                delta_color="normal" if threshold else "off",
+            )
 
+        st.markdown("<br>", unsafe_allow_html=True)
         col_cm, col_fi = st.columns(2)
 
-        # Matrice de confusion
         with col_cm:
             st.markdown('<p class="section-label">🗺️ Matrice de confusion</p>', unsafe_allow_html=True)
             cm = data.get("confusion_matrix")
@@ -322,16 +485,12 @@ with metrics_tab:
                     index=["Réel : Insatisfait", "Réel : Satisfait"],
                     columns=["Prédit : Insatisfait", "Prédit : Satisfait"],
                 )
-                st.dataframe(
-                    df_cm.style.background_gradient(cmap="YlOrRd"),
-                    use_container_width=True,
-                )
+                st.dataframe(df_cm.style.background_gradient(cmap="RdYlGn"), use_container_width=True)
             else:
                 st.info("Matrice non disponible.")
 
-        # Features importances
         with col_fi:
-            st.markdown('<p class="section-label">🏆 Variables les plus importantes</p>', unsafe_allow_html=True)
+            st.markdown('<p class="section-label">🏆 Top 10 variables importantes</p>', unsafe_allow_html=True)
             fi = data.get("feature_importances")
             if fi:
                 df_fi = (
@@ -339,23 +498,23 @@ with metrics_tab:
                     .sort_values("Importance", ascending=False)
                     .head(10)
                 )
-                st.bar_chart(df_fi.set_index("Feature"), color="#FF6B35")
+                st.bar_chart(df_fi.set_index("Feature"), color="#E94560")
             else:
                 st.info("Importances non disponibles (modèle linéaire).")
     else:
-        st.info(
-            "L'endpoint `/model-metrics` n'est pas encore disponible. "
-            "Ajoutez-le à l'API pour afficher les métriques ici."
-        )
+        st.info("L'endpoint `/model-metrics` n'est pas disponible. Vérifiez que l'API est démarrée et que test.csv est accessible.")
 
 # ===========================================================================
-# ONGLET 3 — HISTORIQUE
+# PAGE HISTORIQUE
 # ===========================================================================
-with history_tab:
-    st.markdown('<p class="section-label">📋 Journal des prévisions</p>', unsafe_allow_html=True)
+elif page == "📋 Historique":
+    st.markdown('<p style="font-family:Pacifico,cursive;font-size:2rem;color:#1A1A2E;">📋 Historique des prédictions</p>', unsafe_allow_html=True)
+    st.caption("Journal de toutes les prédictions effectuées depuis le démarrage de l'API.")
 
-    if st.button("🔄 Rafraîchir"):
-        st.rerun()
+    col_refresh, _ = st.columns([1, 4])
+    with col_refresh:
+        if st.button("🔄 Rafraîchir", use_container_width=True):
+            st.rerun()
 
     try:
         resp = httpx.get(f"{api_url}/predictions", timeout=5.0)
@@ -363,16 +522,22 @@ with history_tab:
             rows = resp.json()
             if rows:
                 df_hist = pd.DataFrame(rows)
-                # Mise en forme
                 if "prediction" in df_hist.columns:
-                    df_hist["label"] = df_hist["prediction"].map(
-                        {1: "✅ Satisfait", 0: "⚠️ Insatisfait"}
-                    )
+                    df_hist["résultat"] = df_hist["prediction"].map({1: "✅ Satisfait", 0: "⚠️ Insatisfait"})
+
+                # KPIs rapides
+                total = len(df_hist)
+                n_sat = (df_hist["prediction"] == 1).sum()
+                k1, k2, k3 = st.columns(3)
+                k1.metric("Total prédictions", total)
+                k2.metric("Satisfaits", f"{n_sat} ({n_sat/total:.0%})")
+                k3.metric("Insatisfaits", f"{total-n_sat} ({(total-n_sat)/total:.0%})")
+
                 st.dataframe(df_hist, use_container_width=True, height=400)
-                st.caption(f"{len(rows)} prévision(s) enregistrée(s)")
+                st.caption(f"{total} prévision(s) enregistrée(s) — remis à zéro au redémarrage de l'API.")
             else:
-                st.info("🌴 Aucune prévision pour l'instant — lancez votre première prédiction !")
+                st.info("🛫 Aucune prévision pour l'instant — lancez votre première prédiction !")
         else:
             st.info("Endpoint /predictions non disponible.")
     except httpx.HTTPError:
-        st.info("🌊 API non joignable — vérifiez que l'API est démarrée.")
+        st.error("API non joignable — vérifiez que l'API est démarrée.")

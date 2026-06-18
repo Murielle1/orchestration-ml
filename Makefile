@@ -14,7 +14,7 @@ export PYTHONPATH
 API_HOST     ?= 127.0.0.1
 API_PORT     ?= 8000
 FRONTEND_PORT ?= 8501
-MLFLOW_PORT  := 5000
+MLFLOW_PORT  := 5001
 C            ?= 1.0
 MAX_ITER     ?= 1000
 CV           ?= 5
@@ -52,7 +52,7 @@ help: ## Liste des commandes disponibles
 
 
 # ==============================================================================
-# Setup - Installation de l'environnement Python (uv + pyproject.toml) [FOURNI]
+# Setup
 # ==============================================================================
 
 check-uv:
@@ -105,7 +105,6 @@ doctor: check-uv check-venv ## Diagnostique l'environnement de travail
 # ==============================================================================
 
 data: ## Télécharge le dataset Kaggle dans data/raw/
-	# TODO (S0) : nécessite la Kaggle CLI configurée (~/.kaggle/kaggle.json)
 	@echo "$(YELLOW)>> Téléchargement du dataset...$(RESET)"
 	@mkdir -p $(RAW_DIR) $(PROCESSED_DIR)
 	kaggle datasets download -d teejmahal20/airline-passenger-satisfaction \
@@ -113,7 +112,6 @@ data: ## Télécharge le dataset Kaggle dans data/raw/
 	@echo "$(GREEN)[OK] Fichiers disponibles dans $(RAW_DIR)$(RESET)"
 
 features: ## Génère les features prétraitées dans data/processed/
-	# TODO (S0) : prépare X_train, X_test encodés + pipeline joblib
 	@echo "$(YELLOW)>> Feature engineering...$(RESET)"
 	$(PYTHON) -m src.features \
 		--train-path $(TRAIN_CSV) \
@@ -122,42 +120,86 @@ features: ## Génère les features prétraitées dans data/processed/
 	@echo "$(GREEN)[OK] Features disponibles dans $(PROCESSED_DIR)$(RESET)"
 
 train: ## Entraîne la baseline → models/model.joblib (C=.. MAX_ITER=..)
-	# TODO (S5) : instrumenter avec MLflow Tracking
 	@echo "$(YELLOW)>> Entraînement baseline (C=$(C) max_iter=$(MAX_ITER))...$(RESET)"
 	$(PYTHON) -m src.train --c $(C) --max-iter $(MAX_ITER)
 	@echo "$(GREEN)[OK] Modèle sauvegardé dans models/$(RESET)"
 
-train-models: ## Compare RF / XGBoost / LightGBM (GridSearchCV) + SHAP (CV=.. SCORING=..)
-	# TODO (S7) : $(PYTHON) -m src.train_models --cv $(CV) --scoring $(SCORING)
+train-models: ## Compare RF / XGBoost / LightGBM (GridSearchCV) (CV=.. SCORING=..)
+	@echo "$(YELLOW)>> Comparaison de modèles (cv=$(CV) scoring=$(SCORING))...$(RESET)"
+	$(PYTHON) -m src.train_models --cv $(CV) --scoring $(SCORING)
+	@echo "$(GREEN)[OK] Comparaison terminée$(RESET)"
 
 train-optuna: ## Optimise RF / XGBoost / LightGBM avec Optuna (N_TRIALS=.. CV=..)
-	# TODO (S6) : $(PYTHON) -m src.train_optuna --n-trials $(N_TRIALS) --cv $(CV)
+	@echo "$(YELLOW)>> Optimisation Optuna (n_trials=$(N_TRIALS) cv=$(CV))...$(RESET)"
+	$(PYTHON) -m src.train_optuna --n-trials $(N_TRIALS) --cv $(CV)
+	@echo "$(GREEN)[OK] Optimisation terminée$(RESET)"
 
-mlflow: ## Démarre le serveur MLflow (docker compose)
-	# TODO (S5) : docker compose -f docker-compose.yml up -d mlflow
+evaluate: ## Évalue le modèle sur test.csv avec porte qualité
+	@echo "$(YELLOW)>> Évaluation du modèle...$(RESET)"
+	$(PYTHON) -m src.evaluate
+	@echo "$(GREEN)[OK] Évaluation terminée$(RESET)"
 
-api: ## Lance l'API FastAPI en rechargement auto (voir API_HOST/API_PORT)
-	# TODO (S12) : $(RUN) uvicorn src.api:app --reload --host $(API_HOST) --port $(API_PORT)
+mlflow: ## Démarre le serveur MLflow sur http://localhost:5001
+	@echo "$(YELLOW)>> Démarrage de MLflow...$(RESET)"
+	docker compose up -d mlflow
+	@echo "$(GREEN)[OK] MLflow disponible sur http://localhost:$(MLFLOW_PORT)$(RESET)"
 
-frontend: ## Lance le frontend Streamlit (voir FRONTEND_PORT, API_URL)
-	# TODO (S14bis) : $(RUN) streamlit run frontend/app.py --server.port $(FRONTEND_PORT)
+api: ## Lance l'API FastAPI en rechargement auto (API_HOST/API_PORT)
+	@echo "$(YELLOW)>> Démarrage de l'API FastAPI...$(RESET)"
+	$(RUN) uvicorn src.api:app --reload --host $(API_HOST) --port $(API_PORT)
+
+frontend: ## Lance le frontend Streamlit (FRONTEND_PORT, API_URL)
+	@echo "$(YELLOW)>> Démarrage du frontend Streamlit...$(RESET)"
+	API_URL=http://$(API_HOST):$(API_PORT) \
+		$(RUN) streamlit run frontend/app.py --server.port $(FRONTEND_PORT)
 
 
 # ==============================================================================
 # Docker
 # ==============================================================================
 
-docker-build: ## Construit l'image d'entraînement
-	# TODO (S8) : docker build -f docker/Dockerfile.train -t src-train .
+docker-build: ## Construit les images train, api et frontend
+	@echo "$(YELLOW)>> Build des images Docker...$(RESET)"
+	docker build -f docker/Dockerfile.train    -t mlproject-train    .
+	docker build -f docker/Dockerfile.api      -t mlproject-api      .
+	docker build -f docker/Dockerfile.frontend -t mlproject-frontend .
+	@echo "$(GREEN)[OK] Images construites$(RESET)"
 
-docker-run: ## Lance l'entraînement en conteneur
-	# TODO (S8) : docker run --rm -v "$(CURDIR)/../models:/app/models" src-train
+docker-run: ## Lance l'entraînement en conteneur (one-shot)
+	@echo "$(YELLOW)>> Entraînement en conteneur...$(RESET)"
+	docker run --rm -v "$(CURDIR)/models:/app/models" \
+		-e MLFLOW_TRACKING_URI=sqlite:///mlruns.db \
+		mlproject-train
 
-docker-up: ## Démarre la stack complète (mlflow, api, frontend)
-	# TODO (S14) : docker compose -f docker-compose.yml up -d --build mlflow api frontend
+docker-train: ## Entraîne via docker compose (profil train)
+	@echo "$(YELLOW)>> Entraînement via docker compose...$(RESET)"
+	docker compose --profile train run --rm train
+	@echo "$(GREEN)[OK] Modèle disponible dans le volume models_data$(RESET)"
+
+docker-up: ## Démarre la stack complète (mlflow → train → api → frontend)
+	@echo "$(YELLOW)>> Démarrage de la stack...$(RESET)"
+	docker compose up -d mlflow
+	@echo "  Attente de MLflow..."
+	sleep 5
+	docker compose --profile train run --rm train
+	docker compose up -d api frontend
+	@echo "$(GREEN)[OK] Stack démarrée$(RESET)"
+	@echo "  MLflow   → http://localhost:$(MLFLOW_PORT)"
+	@echo "  API      → http://localhost:$(API_PORT)"
+	@echo "  Frontend → http://localhost:$(FRONTEND_PORT)"
 
 docker-down: ## Arrête et supprime les conteneurs (conserve les volumes)
-	# TODO (S14) : docker compose -f docker-compose.yml down
+	@echo "$(YELLOW)>> Arrêt de la stack...$(RESET)"
+	docker compose down
+	@echo "$(GREEN)[OK] Stack arrêtée$(RESET)"
+
+docker-down-all: ## Arrête les conteneurs ET supprime les volumes
+	@echo "$(YELLOW)>> Arrêt complet avec suppression des volumes...$(RESET)"
+	docker compose down -v
+	@echo "$(GREEN)[OK] Stack et volumes supprimés$(RESET)"
+
+docker-logs: ## Affiche les logs de tous les services en temps réel
+	docker compose logs -f
 
 
 # ==============================================================================
