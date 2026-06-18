@@ -317,7 +317,7 @@ with main_col:
         </p>
         <div class="hero-btns">
             <a class="hero-btn" href="{GITHUB_URL}" target="_blank">🐙 GitHub — Code source</a>
-            <a class="hero-btn" href="{api_url}/docs" target="_blank">📖 API Docs</a>
+            <a class="hero-btn" href="http://141.145.217.77:8000/docs" target="_blank">📖 API Docs</a>
             <a class="hero-btn" href="{MLFLOW_URL}" target="_blank">📊 MLflow</a>
             <a class="hero-btn" href="{AIRFLOW_URL}" target="_blank">🌬️ Airflow</a>
         </div>
