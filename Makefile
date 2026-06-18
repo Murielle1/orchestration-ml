@@ -15,6 +15,7 @@ API_HOST     ?= 127.0.0.1
 API_PORT     ?= 8000
 FRONTEND_PORT ?= 8501
 MLFLOW_PORT  := 5001
+AIRFLOW_PORT := 8080
 C            ?= 1.0
 MAX_ITER     ?= 1000
 CV           ?= 5
@@ -38,8 +39,9 @@ RESET  := $(shell printf '\033[0m')
 
 .PHONY: help \
         check-uv check-venv venv-create install sync deps-sync lock reset-env doctor \
-        data features train train-models train-optuna mlflow api frontend \
-        docker-build docker-run docker-up docker-down \
+        data features train train-models train-optuna evaluate mlflow api frontend \
+        airflow airflow-logs airflow-trigger-retrain airflow-trigger-predict \
+        docker-build docker-run docker-train docker-up docker-down docker-down-all docker-logs \
         lint format type test check clean
 
 
@@ -48,7 +50,7 @@ RESET  := $(shell printf '\033[0m')
 # ==============================================================================
 
 help: ## Liste des commandes disponibles
-	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "$(CYAN)%-16s$(RESET) %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "$(CYAN)%-26s$(RESET) %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 
 # ==============================================================================
@@ -155,14 +157,57 @@ frontend: ## Lance le frontend Streamlit (FRONTEND_PORT, API_URL)
 
 
 # ==============================================================================
+# Airflow
+# ==============================================================================
+
+airflow: ## Démarre Airflow via docker compose sur http://localhost:8080
+	@echo "$(YELLOW)>> Démarrage d'Airflow...$(RESET)"
+	docker compose up -d airflow
+	@echo "$(GREEN)[OK] Airflow disponible sur http://localhost:$(AIRFLOW_PORT)$(RESET)"
+	@echo "  Login : admin / admin"
+
+airflow-stop: ## Arrête le service Airflow
+	@echo "$(YELLOW)>> Arrêt d'Airflow...$(RESET)"
+	docker compose stop airflow
+	@echo "$(GREEN)[OK] Airflow arrêté$(RESET)"
+
+airflow-logs: ## Affiche les logs Airflow en temps réel
+	docker compose logs -f airflow
+
+airflow-trigger-retrain: ## Déclenche manuellement le DAG de ré-entraînement
+	@echo "$(YELLOW)>> Déclenchement du DAG model_retraining...$(RESET)"
+	docker compose exec airflow airflow dags trigger model_retraining
+	@echo "$(GREEN)[OK] DAG model_retraining déclenché$(RESET)"
+	@echo "  Suivre l'exécution sur http://localhost:$(AIRFLOW_PORT)"
+
+airflow-trigger-predict: ## Déclenche manuellement le DAG de prédictions quotidiennes
+	@echo "$(YELLOW)>> Déclenchement du DAG daily_predictions...$(RESET)"
+	docker compose exec airflow airflow dags trigger daily_predictions
+	@echo "$(GREEN)[OK] DAG daily_predictions déclenché$(RESET)"
+
+airflow-dags: ## Liste les DAGs disponibles
+	docker compose exec airflow airflow dags list
+
+airflow-init: ## Initialise la DB Airflow et crée l'utilisateur admin
+	@echo "$(YELLOW)>> Initialisation d'Airflow...$(RESET)"
+	docker compose exec airflow airflow db migrate
+	docker compose exec airflow airflow users create \
+		--username admin --password admin \
+		--firstname Admin --lastname User \
+		--role Admin --email admin@example.com
+	@echo "$(GREEN)[OK] Airflow initialisé (admin/admin)$(RESET)"
+
+
+# ==============================================================================
 # Docker
 # ==============================================================================
 
-docker-build: ## Construit les images train, api et frontend
+docker-build: ## Construit les images train, api, frontend et airflow
 	@echo "$(YELLOW)>> Build des images Docker...$(RESET)"
 	docker build -f docker/Dockerfile.train    -t mlproject-train    .
 	docker build -f docker/Dockerfile.api      -t mlproject-api      .
 	docker build -f docker/Dockerfile.frontend -t mlproject-frontend .
+	docker build -f docker/Dockerfile.airflow  -t mlproject-airflow  .
 	@echo "$(GREEN)[OK] Images construites$(RESET)"
 
 docker-run: ## Lance l'entraînement en conteneur (one-shot)
@@ -176,17 +221,18 @@ docker-train: ## Entraîne via docker compose (profil train)
 	docker compose --profile train run --rm train
 	@echo "$(GREEN)[OK] Modèle disponible dans le volume models_data$(RESET)"
 
-docker-up: ## Démarre la stack complète (mlflow → train → api → frontend)
-	@echo "$(YELLOW)>> Démarrage de la stack...$(RESET)"
+docker-up: ## Démarre la stack complète (mlflow → train → api → frontend → airflow)
+	@echo "$(YELLOW)>> Démarrage de la stack complète...$(RESET)"
 	docker compose up -d mlflow
 	@echo "  Attente de MLflow..."
 	sleep 5
 	docker compose --profile train run --rm train
-	docker compose up -d api frontend
+	docker compose up -d api frontend airflow
 	@echo "$(GREEN)[OK] Stack démarrée$(RESET)"
 	@echo "  MLflow   → http://localhost:$(MLFLOW_PORT)"
 	@echo "  API      → http://localhost:$(API_PORT)"
 	@echo "  Frontend → http://localhost:$(FRONTEND_PORT)"
+	@echo "  Airflow  → http://localhost:$(AIRFLOW_PORT)"
 
 docker-down: ## Arrête et supprime les conteneurs (conserve les volumes)
 	@echo "$(YELLOW)>> Arrêt de la stack...$(RESET)"
