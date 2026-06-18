@@ -269,7 +269,7 @@ with left_col:
     st.markdown('<div class="side-title">⚙️ Configuration</div>', unsafe_allow_html=True)
 
     st.markdown("**URL de l'API**")
-    api_url_input = st.text_input("API URL", value=API_URL, label_visibility="collapsed")
+    api_url_input = st.text_input("API URL", value="http://141.145.217.77:8000/docs", label_visibility="collapsed")
     api_url = api_url_input
 
     is_up = api_health()
@@ -293,7 +293,7 @@ with left_col:
     st.markdown(f"""
     <div class="side-panel">
         <div class="side-title">🔗 Liens rapides</div>
-        <a class="ql-btn ql-docs"    href="{api_url}/docs"  target="_blank">📖 API Docs</a>
+        <a class="ql-btn ql-docs"    href="{API_URL}/docs"  target="_blank">📖 API Docs</a>
         <a class="ql-btn ql-mlflow"  href="{MLFLOW_URL}"    target="_blank">📊 MLflow</a>
         <a class="ql-btn ql-airflow" href="{AIRFLOW_URL}"   target="_blank">🌬️ Airflow</a>
         <a class="ql-btn ql-github"  href="{GITHUB_URL}"    target="_blank">🐙 GitHub</a>
@@ -317,7 +317,7 @@ with main_col:
         </p>
         <div class="hero-btns">
             <a class="hero-btn" href="{GITHUB_URL}" target="_blank">🐙 GitHub — Code source</a>
-            <a class="hero-btn" href="{api_url}/docs" target="_blank">📖 API Docs</a>
+            <a class="hero-btn" href="{API_URL}/docs" target="_blank">📖 API Docs</a>
             <a class="hero-btn" href="{MLFLOW_URL}" target="_blank">📊 MLflow</a>
             <a class="hero-btn" href="{AIRFLOW_URL}" target="_blank">🌬️ Airflow</a>
         </div>

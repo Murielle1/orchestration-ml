@@ -134,7 +134,7 @@ services:
       - ./dags:/opt/airflow/dags
       - ./src:/opt/airflow/src
       - ./data:/opt/airflow/data     # pas de :ro — Airflow doit écrire dans data/processed/
-      - models_data:/opt/airflow/models:ro
+      - models_data:/opt/airflow/models
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
