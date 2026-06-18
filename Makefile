@@ -213,7 +213,7 @@ format: ## Formate le code (ruff)
 	$(RUN) ruff format src
 
 type: ## Vérifie les types (mypy)
-	MYPYPATH=src $(RUN) mypy src --explicit-package-bases
+	$(RUN) mypy src --namespace-packages --explicit-package-bases
 
 test: ## Lance les tests (pytest)
 	$(RUN) pytest
