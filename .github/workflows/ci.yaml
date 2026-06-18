@@ -57,7 +57,7 @@ jobs:
 
       # S18-4 : types
       - name: Types (mypy)
-        run: uv run mypy src
+        run: uv run mypy src --explicit-package-bases
 
       # S18-5 : tests
       # - name: Tests (pytest)
