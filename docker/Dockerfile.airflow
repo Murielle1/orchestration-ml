@@ -1,0 +1,38 @@
+# Image Airflow pour le projet Airline Passenger Satisfaction.
+# Build : docker build -f docker/Dockerfile.airflow -t mlproject-airflow .
+# Basée sur l'image officielle Apache Airflow avec les dépendances du projet.
+
+FROM apache/airflow:2.9.3-python3.11
+
+# Passer en root pour installer les dépendances système
+USER root
+
+# libgomp1 requis par LightGBM
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Repasser sur l'utilisateur airflow (obligatoire pour pip install)
+USER airflow
+
+# Copier pyproject.toml et installer les dépendances du projet
+COPY pyproject.toml /tmp/pyproject.toml
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir \
+        scikit-learn \
+        pandas \
+        numpy \
+        joblib \
+        mlflow \
+        optuna \
+        xgboost \
+        lightgbm \
+        httpx \
+        python-dotenv
+
+# Copier le code source
+COPY src/ /opt/airflow/src/
+COPY dags/ /opt/airflow/dags/
+
+# PYTHONPATH pour que `from src.config import ...` fonctionne dans les DAGs
+ENV PYTHONPATH=/opt/airflow

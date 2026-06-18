@@ -1,18 +1,29 @@
-# Séance 14 - TP docker-compose : orchestrez votre stack de classification.
+# Séance 14 / 17 - Stack complète : MLflow + Train + API + Frontend + Airflow
 #
-# Services : mlflow (suivi), train (entraînement one-shot, profil "train"),
-#            api (FastAPI) et frontend (Streamlit).
-#
-# Commandes (depuis la racine du projet) :
+# Commandes :
 #   docker compose up -d mlflow
 #   docker compose --profile train run --rm train
 #   docker compose up -d api frontend
-#   -> API sur http://<IP_PUBLIQUE>:8000, frontend sur http://<IP_PUBLIQUE>:8501
+#   docker compose up -d airflow
+#   -> API      : http://localhost:8000
+#   -> Frontend : http://localhost:8501
+#   -> MLflow   : http://localhost:5001
+#   -> Airflow  : http://localhost:8080
+
+x-airflow-env: &airflow-env
+  AIRFLOW__CORE__EXECUTOR: LocalExecutor
+  AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: sqlite:////opt/airflow/airflow.db
+  AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+  AIRFLOW__WEBSERVER__SECRET_KEY: "changeme-in-production"
+  AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+  MLFLOW_TRACKING_URI: http://mlflow:5000
+  API_URL: http://api:8000
+  PYTHONPATH: /opt/airflow
 
 services:
 
   # ---------------------------------------------------------------------------
-  # MLflow : serveur de tracking et registry
+  # MLflow
   # ---------------------------------------------------------------------------
   mlflow:
     image: ghcr.io/mlflow/mlflow:v3.13.0
@@ -35,7 +46,7 @@ services:
       retries: 10
 
   # ---------------------------------------------------------------------------
-  # Train : entraînement one-shot (profil "train")
+  # Train (one-shot)
   # ---------------------------------------------------------------------------
   train:
     build:
@@ -53,7 +64,7 @@ services:
       - train
 
   # ---------------------------------------------------------------------------
-  # API : inférence FastAPI
+  # API FastAPI
   # ---------------------------------------------------------------------------
   api:
     build:
@@ -78,7 +89,7 @@ services:
       retries: 10
 
   # ---------------------------------------------------------------------------
-  # Frontend : interface Streamlit
+  # Frontend Streamlit
   # ---------------------------------------------------------------------------
   frontend:
     build:
@@ -93,9 +104,47 @@ services:
       api:
         condition: service_healthy
 
+  # ---------------------------------------------------------------------------
+  # Airflow — webserver + scheduler dans un seul conteneur (mode standalone)
+  # ---------------------------------------------------------------------------
+  airflow:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.airflow
+    restart: unless-stopped
+    command: >
+      bash -c "
+        airflow db migrate &&
+        airflow users create
+          --username admin --password admin
+          --firstname Admin --lastname User
+          --role Admin --email admin@example.com || true &&
+        airflow scheduler &
+        airflow webserver --port 8080
+      "
+    ports:
+      - "0.0.0.0:8080:8080"
+    environment:
+      <<: *airflow-env
+    depends_on:
+      api:
+        condition: service_healthy
+    volumes:
+      - airflow_data:/opt/airflow
+      - ./dags:/opt/airflow/dags
+      - ./src:/opt/airflow/src
+      - ./data:/opt/airflow/data:ro
+      - models_data:/opt/airflow/models:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+
 # ---------------------------------------------------------------------------
-# Volumes partagés
+# Volumes
 # ---------------------------------------------------------------------------
 volumes:
   mlflow_data:
   models_data:
+  airflow_data:
