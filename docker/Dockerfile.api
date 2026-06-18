@@ -21,7 +21,6 @@ RUN pip install --no-cache-dir --upgrade pip \
 # Code source
 COPY src/ ./src/
 
-COPY data/ ./data/
 
 # models/ sera monté en volume read-only au runtime (model.joblib)
 RUN mkdir -p models/
