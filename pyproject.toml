@@ -46,6 +46,13 @@ target-version = "py313"
 python_version = "3.13"
 [[tool.mypy.overrides]]
 module = [
+  "config",
+  "data",
+  "features",
+  "tracking",
+  "train",
+  "train_models",
+  "train_optuna",
   "sklearn.*",
   "pandas.*",
   "joblib.*",
