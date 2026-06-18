@@ -269,7 +269,7 @@ with left_col:
     st.markdown('<div class="side-title">⚙️ Configuration</div>', unsafe_allow_html=True)
 
     st.markdown("**URL de l'API**")
-    api_url_input = st.text_input("API URL", value="http://141.145.217.77:8000/docs", label_visibility="collapsed")
+    api_url_input = st.text_input("API URL", value=API_URL, label_visibility="collapsed")
     api_url = api_url_input
 
     is_up = api_health()
