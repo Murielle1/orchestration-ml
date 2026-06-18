@@ -35,4 +35,5 @@ COPY src/ /opt/airflow/src/
 COPY dags/ /opt/airflow/dags/
 
 # PYTHONPATH pour que `from src.config import ...` fonctionne dans les DAGs
-ENV PYTHONPATH=/opt/airflow
+ENV PYTHONPATH=/opt/airflow \
+    AIRFLOW__CORE__EXECUTOR=SequentialExecutor
